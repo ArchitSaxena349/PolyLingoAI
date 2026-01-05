@@ -1,11 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase, AppTemplate } from '../lib/supabase';
+export type { AppTemplate };
 import { useAuth } from './AuthContext';
 
 export interface AppComponent {
   id: string;
-  type: 'text-input' | 'voice-output' | 'language-selection' | 'ai-copilot' | 'custom';
+  type: 'text-input' | 'voice-output' | 'language-selection' | 'ai-copilot' | 'custom' | 'image' | 'button' | 'container' | 'video-player' | 'chat-interface' | 'image-generator' | 'analytics';
   props: Record<string, any>;
   position: { x: number; y: number };
 }
@@ -20,6 +21,7 @@ interface AppBuilderContextType {
   updateComponent: (id: string, updates: Partial<AppComponent>) => void;
   removeComponent: (id: string) => void;
   publishApp: (appId: string) => Promise<string>;
+  exportApp: (app: AppTemplate) => void;
   loading: boolean;
 }
 
@@ -41,7 +43,7 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const fetchUserApps = useCallback(async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -108,9 +110,9 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!user) return;
 
     try {
-      const updatedApp = { 
-        ...app, 
-        updated_at: new Date().toISOString() 
+      const updatedApp = {
+        ...app,
+        updated_at: new Date().toISOString()
       };
 
       const { data, error } = await supabase
@@ -140,41 +142,41 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addComponent = useCallback((component: Omit<AppComponent, 'id'>) => {
     if (!currentApp) return;
-    
+
     const newComponent: AppComponent = {
       ...component,
       id: crypto.randomUUID()
     };
-    
+
     const updatedApp = {
       ...currentApp,
       components: [...currentApp.components, newComponent]
     };
-    
+
     setCurrentApp(updatedApp);
   }, [currentApp]);
 
   const updateComponent = useCallback((id: string, updates: Partial<AppComponent>) => {
     if (!currentApp) return;
-    
+
     const updatedApp = {
       ...currentApp,
       components: currentApp.components.map(comp =>
         comp.id === id ? { ...comp, ...updates } : comp
       )
     };
-    
+
     setCurrentApp(updatedApp);
   }, [currentApp]);
 
   const removeComponent = useCallback((id: string) => {
     if (!currentApp) return;
-    
+
     const updatedApp = {
       ...currentApp,
       components: currentApp.components.filter(comp => comp.id !== id)
     };
-    
+
     setCurrentApp(updatedApp);
   }, [currentApp]);
 
@@ -183,14 +185,14 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Mock deployment process - in production, this would trigger actual deployment
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     const deployedUrl = `https://${appId}-polylingo.netlify.app`;
-    
+
     // Update app as published
     const { error } = await supabase
       .from('app_templates')
-      .update({ 
-        published: true, 
+      .update({
+        published: true,
         published_url: deployedUrl,
         updated_at: new Date().toISOString()
       })
@@ -200,12 +202,31 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (error) throw error;
 
     // Update local state
-    setApps(prev => prev.map(app => 
+    setApps(prev => prev.map(app =>
       app.id === appId ? { ...app, published: true, published_url: deployedUrl } : app
     ));
-    
+
+    return deployedUrl;
     return deployedUrl;
   }, [user]);
+
+  const exportApp = useCallback((app: AppTemplate) => {
+    const exportData = {
+      ...app,
+      exported_at: new Date().toISOString(),
+      version: '1.0.0'
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${app.title.toLowerCase().replace(/\s+/g, '-')}-export.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
 
   return (
     <AppBuilderContext.Provider value={{
@@ -217,7 +238,9 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       addComponent,
       updateComponent,
       removeComponent,
+      removeComponent,
       publishApp,
+      exportApp,
       loading
     }}>
       {children}

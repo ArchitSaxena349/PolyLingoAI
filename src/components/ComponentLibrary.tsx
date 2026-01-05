@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Mic, Globe, Type, MessageSquare, Image, Video, BarChart } from 'lucide-react';
+import { Bot, Mic, Globe, Type, MessageSquare, Image, Video, BarChart, Hand, Box } from 'lucide-react';
 import DraggableComponent from './DraggableComponent';
 
 const ComponentLibrary = () => {
@@ -31,6 +31,27 @@ const ComponentLibrary = () => {
       description: 'Intelligent assistant',
       icon: Bot,
       category: 'AI'
+    },
+    {
+      type: 'image',
+      title: 'Image Display',
+      description: 'Show an image from URL',
+      icon: Image,
+      category: 'Media'
+    },
+    {
+      type: 'button',
+      title: 'Action Button',
+      description: 'Trigger actions on click',
+      icon: Hand,
+      category: 'Input'
+    },
+    {
+      type: 'container',
+      title: 'Container',
+      description: 'Group content together',
+      icon: Box,
+      category: 'Layout'
     },
     {
       type: 'chat-interface',
@@ -67,13 +88,13 @@ const ComponentLibrary = () => {
   return (
     <div className="p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Component Library</h3>
-      
+
       {categories.map(category => (
         <div key={category} className="mb-6">
           <h4 className="text-sm font-medium text-gray-700 mb-3 uppercase tracking-wide">
             {category}
           </h4>
-          
+
           <div className="space-y-3">
             {componentTypes
               .filter(comp => comp.category === category)
@@ -89,7 +110,7 @@ const ComponentLibrary = () => {
           </div>
         </div>
       ))}
-      
+
       <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <h4 className="text-sm font-medium text-blue-900 mb-2">Pro Features</h4>
         <p className="text-xs text-blue-700 mb-3">

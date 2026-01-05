@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Save, 
-  Settings, 
+import {
+  Save,
+  Settings,
   Eye,
   Upload,
   ArrowLeft,
@@ -11,7 +11,9 @@ import {
   Palette,
   Languages,
   Volume2,
-  Sparkles
+  Volume2,
+  Sparkles,
+  Download
 } from 'lucide-react';
 import { useAppBuilder } from '../contexts/AppBuilderContext';
 import DroppableCanvas from '../components/DroppableCanvas';
@@ -44,7 +46,7 @@ const AppBuilder = () => {
 
   const handlePublish = async () => {
     if (!currentApp) return;
-    
+
     if (user?.plan === 'free' && !user) {
       alert('Please upgrade to Pro to publish your apps!');
       return;
@@ -81,7 +83,7 @@ const AppBuilder = () => {
             >
               <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
-            
+
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {currentApp.title}
@@ -91,7 +93,7 @@ const AppBuilder = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <button
               onClick={handleSave}
@@ -100,7 +102,7 @@ const AppBuilder = () => {
               <Save className="w-4 h-4" />
               Save
             </button>
-            
+
             <button
               onClick={() => setActiveTab('preview')}
               className="btn-secondary flex items-center gap-2"
@@ -108,24 +110,34 @@ const AppBuilder = () => {
               <Eye className="w-4 h-4" />
               Preview
             </button>
-            
-            <button
-              onClick={handlePublish}
-              disabled={isPublishing}
-              className="btn-primary flex items-center gap-2"
-            >
-              {isPublishing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Publishing...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  Publish
-                </>
-              )}
-            </button>
+
+            <div className="flex bg-white/10 rounded-lg p-1">
+              <button
+                onClick={() => exportApp(currentApp)}
+                className="btn-secondary flex items-center gap-2 rounded-r-none border-r border-white/20"
+                title="Download JSON"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={isPublishing}
+                className="btn-primary flex items-center gap-2 rounded-l-none"
+              >
+                {isPublishing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Publish
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Publish
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -143,11 +155,10 @@ const AppBuilder = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-4 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50/50'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/20'
-                }`}
+                className={`flex-1 px-4 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeTab === tab.id
+                  ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50/50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/20'
+                  }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -174,7 +185,7 @@ const AppBuilder = () => {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     Description
@@ -189,7 +200,7 @@ const AppBuilder = () => {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     <Palette className="w-4 h-4 inline mr-2" />
@@ -208,7 +219,7 @@ const AppBuilder = () => {
                     className="w-20 h-12 border border-gray-300 rounded-xl cursor-pointer"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     <Languages className="w-4 h-4 inline mr-2" />
@@ -232,7 +243,7 @@ const AppBuilder = () => {
                     <option value="zh">Chinese</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     <Volume2 className="w-4 h-4 inline mr-2" />

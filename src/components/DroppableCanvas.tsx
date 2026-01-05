@@ -38,6 +38,20 @@ const DroppableCanvas: React.FC<DroppableCanvasProps> = ({ app }) => {
         return { languages: ['en', 'es', 'fr'], defaultLanguage: 'en' };
       case 'ai-copilot':
         return { model: 'gpt-4', personality: 'helpful', greeting: 'Hi! I\'m here to help.' };
+      case 'image':
+        return { src: 'https://via.placeholder.com/300', alt: 'Placeholder', width: '100%' };
+      case 'button':
+        return { label: 'Click Me', action: 'none', variant: 'primary' };
+      case 'container':
+        return { padding: '16px', background: '#ffffff', borderRadius: '8px' };
+      case 'video-player':
+        return { src: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', autoplay: false };
+      case 'chat-interface':
+        return { title: 'Chat Support', initialMessage: 'How can I help you?', theme: 'light' };
+      case 'image-generator':
+        return { promptLabel: 'Describe image...', buttonText: 'Generate', aspect: '1:1' };
+      case 'analytics':
+        return { title: 'App Usage', metric: 'views', chartType: 'line' };
       default:
         return {};
     }
