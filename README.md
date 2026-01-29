@@ -48,6 +48,8 @@
 
 ## 📸 Screenshots
 
+> **Note**: Replace these placeholders with actual application screenshots for a better representation of the platform.
+
 <div align="center">
   <img src="https://via.placeholder.com/800x450/4ade80/ffffff?text=Landing+Page" alt="Landing Page" width="800">
   <p><em>Modern landing page with gradient design</em></p>
@@ -126,13 +128,37 @@ Generate React Native applications and deploy to app stores automatically. Build
    
    Create a `.env` file in the root directory with the following variables:
    ```env
+   # Supabase Configuration (Required)
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   
+   # ElevenLabs API (Optional - for voice synthesis features)
+   VITE_ELEVENLABS_API_KEY=your_elevenlabs_api_key
+   
+   # Lingo API (Optional - for translation features)
+   VITE_LINGO_API_KEY=your_lingo_api_key
+   
+   # RevenueCat (Optional - for monetization features)
+   VITE_REVENUECAT_API_KEY=your_revenuecat_api_key
    ```
+   
+   > **Note**: Only Supabase variables are required for basic functionality. Other API keys are optional and enable specific features.
 
 4. **Set up Supabase database**
    
-   Run the migrations in the `supabase/migrations` directory to set up your database schema.
+   Install the Supabase CLI if you haven't already:
+   ```bash
+   npm install -g supabase
+   ```
+   
+   Then run the migrations:
+   ```bash
+   supabase db reset
+   # or
+   supabase migration up
+   ```
+   
+   Alternatively, you can manually execute the SQL migrations in your Supabase project dashboard.
 
 5. **Start the development server**
    ```bash
@@ -219,6 +245,12 @@ PolyLingo AI uses Supabase for:
 - **Database**: PostgreSQL for storing app configurations, user data, and voice clones
 - **Real-time**: Live updates and collaboration features
 
+**Setup**:
+1. Create a [Supabase account](https://supabase.com)
+2. Create a new project
+3. Copy your project URL and anon key to the `.env` file
+4. Run the migrations to set up the database schema
+
 ### ElevenLabs API
 
 Voice synthesis and cloning capabilities:
@@ -226,6 +258,12 @@ Voice synthesis and cloning capabilities:
 - Generate natural-sounding speech
 - Customize voice parameters
 - Multiple language support
+
+**Setup**:
+1. Sign up at [ElevenLabs](https://elevenlabs.io/)
+2. Get your API key from the dashboard
+3. Add `VITE_ELEVENLABS_API_KEY` to your `.env` file
+4. [API Documentation](https://docs.elevenlabs.io/)
 
 ### Lingo API
 
@@ -235,6 +273,11 @@ Translation and localization:
 - Context-aware translations
 - Real-time language switching
 
+**Setup**:
+1. Register for Lingo API access
+2. Obtain your API key
+3. Add `VITE_LINGO_API_KEY` to your `.env` file
+
 ### RevenueCat
 
 Monetization and subscription management:
@@ -242,6 +285,13 @@ Monetization and subscription management:
 - Subscription plans (Free/Pro)
 - Payment processing
 - Revenue analytics
+
+**Setup**:
+1. Create an account at [RevenueCat](https://www.revenuecat.com/)
+2. Configure your products and subscription plans
+3. Get your API key
+4. Add `VITE_REVENUECAT_API_KEY` to your `.env` file
+5. [Integration Guide](https://docs.revenuecat.com/)
 
 ---
 
@@ -260,8 +310,13 @@ Monetization and subscription management:
 
 1. Push your code to GitHub
 2. Import the repository in [Vercel](https://vercel.com)
-3. Configure environment variables in Vercel dashboard
-4. Deploy automatically on every push
+3. Configure environment variables in Vercel dashboard:
+   - Go to Project Settings > Environment Variables
+   - Add all required variables from your `.env` file
+4. Enable automatic deployments (optional):
+   - Go to Project Settings > Git
+   - Enable "Automatic Deployments" for your branch
+5. Deploy - Vercel will automatically deploy on every push if enabled
 
 ### Deploy to Netlify
 
