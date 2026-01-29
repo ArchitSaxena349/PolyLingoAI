@@ -23,6 +23,48 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [📸 Screenshots](#-screenshots)
+- [🌟 Features](#-features)
+- [🏗️ Tech Stack](#️-tech-stack)
+- [🚀 Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [📁 Project Structure](#-project-structure)
+- [🎯 Usage](#-usage)
+- [🔌 API Integrations](#-api-integrations)
+- [📜 Available Scripts](#-available-scripts)
+- [🚀 Deployment](#-deployment)
+- [🤝 Contributing](#-contributing)
+- [🐛 Known Issues & Troubleshooting](#-known-issues--troubleshooting)
+- [🗺️ Roadmap](#️-roadmap)
+- [📄 License](#-license)
+- [👨‍💻 Author](#-author)
+- [🙏 Acknowledgments](#-acknowledgments)
+- [📞 Support](#-support)
+
+---
+
+## 📸 Screenshots
+
+<div align="center">
+  <img src="https://via.placeholder.com/800x450/4ade80/ffffff?text=Landing+Page" alt="Landing Page" width="800">
+  <p><em>Modern landing page with gradient design</em></p>
+</div>
+
+<div align="center">
+  <img src="https://via.placeholder.com/800x450/3b82f6/ffffff?text=App+Builder" alt="App Builder" width="800">
+  <p><em>Drag-and-drop visual app builder</em></p>
+</div>
+
+<div align="center">
+  <img src="https://via.placeholder.com/800x450/a855f7/ffffff?text=Dashboard" alt="Dashboard" width="800">
+  <p><em>User dashboard with app management</em></p>
+</div>
+
+---
+
 ## 🌟 Features
 
 ### 🤖 AI-Powered Chatbots
@@ -267,6 +309,24 @@ Please ensure your code follows the existing code style and includes appropriate
 
 **Issue**: Build errors
 - **Solution**: Clear `node_modules` and run `npm install` again
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Core drag-and-drop app builder
+- [x] Supabase authentication and database integration
+- [x] Voice synthesis integration (ElevenLabs)
+- [x] Multi-language support (Lingo API)
+- [x] Component library with AI, chat, and voice components
+- [ ] Real-time collaboration features
+- [ ] Advanced AI model customization
+- [ ] Template marketplace
+- [ ] Mobile app builder enhancements
+- [ ] Analytics dashboard
+- [ ] Team management and permissions
+- [ ] Custom domain support
+- [ ] A/B testing capabilities
 
 ---
 
