@@ -16,7 +16,7 @@ function App() {
     <AuthProvider>
       <AppBuilderProvider>
         <DndProvider backend={HTML5Backend}>
-          <Router>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <div className="min-h-screen bg-gray-50">
               <Routes>
                 <Route path="/" element={<LandingPage />} />

@@ -11,18 +11,22 @@ const AIComponentGenerator: React.FC<AIComponentGeneratorProps> = ({ onComponent
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedComponent, setGeneratedComponent] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
+    setError(null);
     try {
-      const magicAI = new MagicAIService(import.meta.env.VITE_MAGIC_AI_API_KEY);
+      const magicAI = new MagicAIService();
       const result = await magicAI.generateComponent(prompt);
       
       setGeneratedComponent(result);
     } catch (error) {
       console.error('Error generating component:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Component generation failed';
+      setError(errorMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -101,6 +105,9 @@ const AIComponentGenerator: React.FC<AIComponentGeneratorProps> = ({ onComponent
             </div>
           )}
         </button>
+        {error && (
+          <p className="text-sm text-red-600">{error}</p>
+        )}
       </div>
 
       {generatedComponent && (

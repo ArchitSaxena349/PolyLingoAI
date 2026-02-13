@@ -41,12 +41,19 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [apps, setApps] = useState<AppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const ensureSupabase = useCallback(() => {
+    if (!supabase) {
+      throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    }
+    return supabase;
+  }, []);
+
   const fetchUserApps = useCallback(async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await ensureSupabase()
         .from('app_templates')
         .select('*')
         .eq('user_id', user.id)
@@ -59,7 +66,7 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [ensureSupabase, user]);
 
   useEffect(() => {
     if (user) {
@@ -89,10 +96,10 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [user]);
 
   const loadApp = useCallback(async (appId: string) => {
-    if (!user) return;
+    if (!user || !supabase) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await ensureSupabase()
         .from('app_templates')
         .select('*')
         .eq('id', appId)
@@ -104,10 +111,10 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (error) {
       console.error('Error loading app:', error);
     }
-  }, [user]);
+  }, [ensureSupabase, user]);
 
   const saveApp = useCallback(async (app: AppTemplate) => {
-    if (!user) return;
+    if (!user || !supabase) return;
 
     try {
       const updatedApp = {
@@ -115,7 +122,7 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await ensureSupabase()
         .from('app_templates')
         .upsert(updatedApp)
         .select()
@@ -138,7 +145,7 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.error('Error saving app:', error);
       throw error;
     }
-  }, [user]);
+  }, [ensureSupabase, user]);
 
   const addComponent = useCallback((component: Omit<AppComponent, 'id'>) => {
     if (!currentApp) return;
@@ -182,6 +189,7 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const publishApp = useCallback(async (appId: string): Promise<string> => {
     if (!user) throw new Error('User not authenticated');
+    if (!supabase) throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
 
     // Mock deployment process - in production, this would trigger actual deployment
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -189,7 +197,7 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const deployedUrl = `https://${appId}-polylingo.netlify.app`;
 
     // Update app as published
-    const { error } = await supabase
+    const { error } = await ensureSupabase()
       .from('app_templates')
       .update({
         published: true,
@@ -207,8 +215,7 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     ));
 
     return deployedUrl;
-    return deployedUrl;
-  }, [user]);
+  }, [ensureSupabase, user]);
 
   const exportApp = useCallback((app: AppTemplate) => {
     const exportData = {
@@ -237,7 +244,6 @@ export const AppBuilderProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       saveApp,
       addComponent,
       updateComponent,
-      removeComponent,
       removeComponent,
       publishApp,
       exportApp,

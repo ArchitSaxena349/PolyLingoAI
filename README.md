@@ -3,7 +3,7 @@
 <div align="center">
   <img src="https://img.shields.io/badge/TypeScript-93.2%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/React-18.3.1-61dafb" alt="React">
-  <img src="https://img.shields.io/badge/Vite-5.4.2-646cff" alt="Vite">
+  <img src="https://img.shields.io/badge/Vite-7.3.1-646cff" alt="Vite">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
 </div>
 
@@ -92,7 +92,7 @@ Generate React Native applications and deploy to app stores automatically. Build
 ## 🏗️ Tech Stack
 
 - **Frontend Framework**: React 18.3.1 with TypeScript
-- **Build Tool**: Vite 5.4.2
+- **Build Tool**: Vite 7.3.1
 - **Styling**: Tailwind CSS 3.4.1 with custom gradient themes
 - **UI Components**: Headless UI, Framer Motion for animations
 - **Database**: Supabase (PostgreSQL)
@@ -132,17 +132,14 @@ Generate React Native applications and deploy to app stores automatically. Build
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    
-   # ElevenLabs API (Optional - for voice synthesis features)
-   VITE_ELEVENLABS_API_KEY=your_elevenlabs_api_key
-   
-   # Lingo API (Optional - for translation features)
-   VITE_LINGO_API_KEY=your_lingo_api_key
-   
-   # RevenueCat (Optional - for monetization features)
-   VITE_REVENUECAT_API_KEY=your_revenuecat_api_key
+   # Backend API base URL (Optional - defaults to /api)
+   VITE_BACKEND_API_URL=http://localhost:8787/api
    ```
    
-   > **Note**: Only Supabase variables are required for basic functionality. Other API keys are optional and enable specific features.
+   > **Security note**: Do not expose provider API keys in `VITE_` variables. Keep ElevenLabs/Lingo/RevenueCat/Tavus keys on your backend or Supabase Edge Functions.
+   >
+   > Add provider secrets to your backend environment (non-`VITE_`), for example:
+   > `ELEVENLABS_API_KEY`, `MAGIC_AI_API_KEY`, `LINGO_API_KEY`, `REVENUECAT_API_KEY`, `DAPPIER_API_KEY`, `TAVUS_API_KEY`, `RIVER_API_KEY`, `NETLIFY_ACCESS_TOKEN`.
 
 4. **Set up Supabase database**
    
@@ -160,12 +157,17 @@ Generate React Native applications and deploy to app stores automatically. Build
    
    Alternatively, you can manually execute the SQL migrations in your Supabase project dashboard.
 
-5. **Start the development server**
+5. **Start the backend API server**
+   ```bash
+   npm run backend
+   ```
+
+6. **Start the frontend development server**
    ```bash
    npm run dev
    ```
 
-6. **Open your browser**
+7. **Open your browser**
    
    Navigate to `http://localhost:5173` to see the application running.
 
@@ -262,8 +264,9 @@ Voice synthesis and cloning capabilities:
 **Setup**:
 1. Sign up at [ElevenLabs](https://elevenlabs.io/)
 2. Get your API key from the dashboard
-3. Add `VITE_ELEVENLABS_API_KEY` to your `.env` file
-4. [API Documentation](https://docs.elevenlabs.io/)
+3. Store the key on your backend (not in frontend env vars)
+4. Expose a backend endpoint under `VITE_BACKEND_API_URL` for voice operations
+5. [API Documentation](https://docs.elevenlabs.io/)
 
 ### Lingo API
 
@@ -276,7 +279,7 @@ Translation and localization:
 **Setup**:
 1. Register for Lingo API access
 2. Obtain your API key
-3. Add `VITE_LINGO_API_KEY` to your `.env` file
+3. Store the key on your backend and expose translation endpoints to the frontend
 
 ### RevenueCat
 
@@ -290,7 +293,7 @@ Monetization and subscription management:
 1. Create an account at [RevenueCat](https://www.revenuecat.com/)
 2. Configure your products and subscription plans
 3. Get your API key
-4. Add `VITE_REVENUECAT_API_KEY` to your `.env` file
+4. Store the key on your backend and proxy requests from authenticated clients
 5. [Integration Guide](https://docs.revenuecat.com/)
 
 ---
@@ -298,6 +301,7 @@ Monetization and subscription management:
 ## 📜 Available Scripts
 
 - **`npm run dev`** - Start development server
+- **`npm run backend`** - Start backend integration proxy server (`/api`)
 - **`npm run build`** - Build for production
 - **`npm run preview`** - Preview production build locally
 - **`npm run lint`** - Run ESLint for code quality checks

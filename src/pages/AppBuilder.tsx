@@ -11,7 +11,6 @@ import {
   Palette,
   Languages,
   Volume2,
-  Volume2,
   Sparkles,
   Download
 } from 'lucide-react';

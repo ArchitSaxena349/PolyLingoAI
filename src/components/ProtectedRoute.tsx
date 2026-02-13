@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, initialLoading } = useAuth();
+  const { user, initialLoading, isSupabaseConfigured } = useAuth();
 
   if (initialLoading) {
     return (
@@ -15,6 +15,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
       </div>
     );
+  }
+
+  if (!isSupabaseConfigured) {
+    return <Navigate to="/setup" replace />;
   }
 
   if (!user) {

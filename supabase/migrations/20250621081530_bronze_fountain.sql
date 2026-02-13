@@ -180,7 +180,8 @@ BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ language 'plpgsql'
+SET search_path = public;
 
 -- Create triggers for updated_at
 CREATE TRIGGER update_users_updated_at

@@ -13,6 +13,7 @@ const VoiceCloner: React.FC<VoiceClonerProps> = ({ onVoiceCloned }) => {
   const [isCloning, setIsCloning] = useState(false);
   const [previewAudio, setPreviewAudio] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -27,8 +28,9 @@ const VoiceCloner: React.FC<VoiceClonerProps> = ({ onVoiceCloned }) => {
     if (!audioFile || !voiceName) return;
 
     setIsCloning(true);
+    setError(null);
     try {
-      const elevenLabs = new ElevenLabsService(import.meta.env.VITE_ELEVENLABS_API_KEY);
+      const elevenLabs = new ElevenLabsService();
       const result = await elevenLabs.cloneVoice(voiceName, audioFile);
       
       if (result.voice_id) {
@@ -36,6 +38,8 @@ const VoiceCloner: React.FC<VoiceClonerProps> = ({ onVoiceCloned }) => {
       }
     } catch (error) {
       console.error('Error cloning voice:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Voice cloning failed';
+      setError(errorMessage);
     } finally {
       setIsCloning(false);
     }
@@ -154,6 +158,9 @@ const VoiceCloner: React.FC<VoiceClonerProps> = ({ onVoiceCloned }) => {
           <p>Voice cloning typically takes 2-3 minutes</p>
           <p>Ensure your audio is clear and at least 30 seconds long</p>
         </div>
+        {error && (
+          <p className="text-sm text-red-600 text-center">{error}</p>
+        )}
       </div>
     </motion.div>
   );

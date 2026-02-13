@@ -1,115 +1,119 @@
-// ElevenLabs Voice Integration
-export class ElevenLabsService {
-  private apiKey: string;
-  private baseUrl = 'https://api.elevenlabs.io/v1';
+type RequestMethod = 'GET' | 'POST';
+type ResponseType = 'json' | 'blob';
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+const getApiBaseUrl = () => (import.meta.env.VITE_BACKEND_API_URL || '/api').replace(/\/$/, '');
+
+const buildHeaders = (body?: BodyInit | null): HeadersInit => {
+  if (body instanceof FormData) return {};
+  return {
+    'Content-Type': 'application/json',
+  };
+};
+
+const parseErrorMessage = async (response: Response) => {
+  try {
+    const payload = await response.json();
+    if (typeof payload?.error === 'string') return payload.error;
+    if (typeof payload?.message === 'string') return payload.message;
+  } catch {
+    // Ignore JSON parse failures and use status text fallback.
+  }
+  return response.statusText || 'Integration request failed';
+};
+
+const apiRequest = async <T>(
+  baseUrl: string,
+  path: string,
+  method: RequestMethod = 'GET',
+  body?: BodyInit | null,
+  responseType: ResponseType = 'json'
+): Promise<T> => {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: buildHeaders(body),
+    body,
+  });
+
+  if (!response.ok) {
+    const message = await parseErrorMessage(response);
+    throw new Error(message);
   }
 
+  if (responseType === 'blob') {
+    return await response.blob() as T;
+  }
+
+  return await response.json() as T;
+};
+
+// All integration calls are routed through backend endpoints so provider keys stay server-side.
+export class ElevenLabsService {
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
+
   async getVoices() {
-    const response = await fetch(`${this.baseUrl}/voices`, {
-      headers: {
-        'xi-api-key': this.apiKey,
-      },
-    });
-    return response.json();
+    return await apiRequest<any>(this.apiBaseUrl, '/integrations/elevenlabs/voices');
   }
 
   async cloneVoice(name: string, audioFile: File) {
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('files', audioFile);
+    const arrayBuffer = await audioFile.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Data = btoa(binary);
 
-    const response = await fetch(`${this.baseUrl}/voices/add`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': this.apiKey,
-      },
-      body: formData,
-    });
-    return response.json();
+    return await apiRequest<any>(
+      this.apiBaseUrl,
+      '/integrations/elevenlabs/voices/clone',
+      'POST',
+      JSON.stringify({
+        name,
+        fileName: audioFile.name,
+        mimeType: audioFile.type,
+        base64Data,
+      })
+    );
   }
 
   async generateSpeech(text: string, voiceId: string) {
-    const response = await fetch(`${this.baseUrl}/text-to-speech/${voiceId}`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text,
-        model_id: 'eleven_monolingual_v1',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
-        },
-      }),
-    });
-    return response.blob();
+    return await apiRequest<Blob>(
+      this.apiBaseUrl,
+      `/integrations/elevenlabs/text-to-speech/${encodeURIComponent(voiceId)}`,
+      'POST',
+      JSON.stringify({ text }),
+      'blob'
+    );
   }
 }
 
-// Lingo Translation Service
 export class LingoService {
-  private apiKey: string;
-  private baseUrl = 'https://api.lingo.com/v1';
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
 
   async translateText(text: string, targetLanguage: string, sourceLanguage = 'en') {
-    const response = await fetch(`${this.baseUrl}/translate`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text,
-        source_language: sourceLanguage,
-        target_language: targetLanguage,
-      }),
-    });
-    return response.json();
+    return await apiRequest<any>(
+      this.apiBaseUrl,
+      '/integrations/lingo/translate',
+      'POST',
+      JSON.stringify({ text, sourceLanguage, targetLanguage })
+    );
   }
 
   async getSupportedLanguages() {
-    const response = await fetch(`${this.baseUrl}/languages`, {
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-      },
-    });
-    return response.json();
+    return await apiRequest<any>(this.apiBaseUrl, '/integrations/lingo/languages');
   }
 }
 
-// Dappier AI Assistant Service
 export class DappierService {
-  private apiKey: string;
-  private baseUrl = 'https://api.dappier.com/v1';
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
 
   async getChatCompletion(messages: any[], model = 'gpt-4') {
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: 1000,
-        temperature: 0.7,
-      }),
-    });
-    return response.json();
+    return await apiRequest<any>(
+      this.apiBaseUrl,
+      '/integrations/dappier/chat/completions',
+      'POST',
+      JSON.stringify({ model, messages, maxTokens: 1000, temperature: 0.7 })
+    );
   }
 
   async getAppBuildingSuggestions(currentComponents: any[]) {
@@ -124,160 +128,84 @@ export class DappierService {
       },
     ];
 
-    return this.getChatCompletion(messages);
+    return await this.getChatCompletion(messages);
   }
 }
 
-// RevenueCat Monetization Service
 export class RevenueCatService {
-  private apiKey: string;
-  private baseUrl = 'https://api.revenuecat.com/v1';
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
 
   async createSubscription(userId: string, productId: string) {
-    const response = await fetch(`${this.baseUrl}/subscribers/${userId}/purchases`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        product_id: productId,
-        price: productId === 'pro_monthly' ? 29.99 : 299.99,
-        currency: 'USD',
-      }),
-    });
-    return response.json();
+    return await apiRequest<any>(
+      this.apiBaseUrl,
+      '/integrations/revenuecat/subscriptions',
+      'POST',
+      JSON.stringify({ userId, productId })
+    );
   }
 
   async getSubscriptionStatus(userId: string) {
-    const response = await fetch(`${this.baseUrl}/subscribers/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-      },
-    });
-    return response.json();
+    return await apiRequest<any>(this.apiBaseUrl, `/integrations/revenuecat/subscribers/${encodeURIComponent(userId)}`);
   }
 }
 
-// Tavus Video Generation Service
 export class TavusService {
-  private apiKey: string;
-  private baseUrl = 'https://api.tavus.io/v1';
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
 
   async generatePersonalizedVideo(userName: string, appName: string) {
-    const response = await fetch(`${this.baseUrl}/videos`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        template_id: 'onboarding_template',
-        variables: {
-          user_name: userName,
-          app_name: appName,
-        },
-      }),
-    });
-    return response.json();
+    return await apiRequest<any>(
+      this.apiBaseUrl,
+      '/integrations/tavus/videos',
+      'POST',
+      JSON.stringify({ userName, appName })
+    );
   }
 }
 
-// River Community Events Service
 export class RiverService {
-  private apiKey: string;
-  private baseUrl = 'https://api.river.com/v1';
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
 
   async getUpcomingEvents() {
-    const response = await fetch(`${this.baseUrl}/events`, {
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-      },
-    });
-    return response.json();
+    return await apiRequest<any>(this.apiBaseUrl, '/integrations/river/events');
   }
 
   async createEvent(eventData: any) {
-    const response = await fetch(`${this.baseUrl}/events`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(eventData),
-    });
-    return response.json();
+    return await apiRequest<any>(this.apiBaseUrl, '/integrations/river/events', 'POST', JSON.stringify(eventData));
   }
 }
 
-// Magic AI Component Generator
 export class MagicAIService {
-  private apiKey: string;
-  private baseUrl = 'https://api.21st.dev/v1';
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
 
   async generateComponent(prompt: string) {
-    const response = await fetch(`${this.baseUrl}/generate-component`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt,
-        framework: 'react',
-        styling: 'tailwindcss',
-      }),
-    });
-    return response.json();
+    return await apiRequest<any>(
+      this.apiBaseUrl,
+      '/integrations/magic/generate-component',
+      'POST',
+      JSON.stringify({ prompt, framework: 'react', styling: 'tailwindcss' })
+    );
   }
 }
 
-// Sentry Error Monitoring
 export const initSentry = () => {
-  // In a real app, you would import and configure Sentry here
   console.log('Sentry monitoring initialized');
 };
 
-// Netlify Deployment Service
 export class NetlifyService {
-  private accessToken: string;
-  private baseUrl = 'https://api.netlify.com/api/v1';
-
-  constructor(accessToken: string) {
-    this.accessToken = accessToken;
-  }
+  constructor(private apiBaseUrl = getApiBaseUrl()) {}
 
   async deployApp(appData: any) {
-    const response = await fetch(`${this.baseUrl}/sites`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    return await apiRequest<any>(
+      this.apiBaseUrl,
+      '/integrations/netlify/sites',
+      'POST',
+      JSON.stringify({
         name: `polylingo-${appData.id}`,
-        build_settings: {
+        buildSettings: {
           cmd: 'npm run build',
           dir: 'dist',
         },
-      }),
-    });
-    return response.json();
+      })
+    );
   }
 }

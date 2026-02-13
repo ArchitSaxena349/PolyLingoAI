@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Database, CheckCircle, ExternalLink, Copy, Eye, EyeOff } from 'lucide-react';
 
@@ -8,12 +8,34 @@ const SetupGuide: React.FC = () => {
   const [supabaseKey, setSupabaseKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [backendMessage, setBackendMessage] = useState('Checking backend connection...');
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const checkBackendStatus = useCallback(async () => {
+    setBackendStatus('checking');
+    setBackendMessage('Checking backend connection...');
+    try {
+      const response = await fetch('/api/health');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      setBackendStatus('online');
+      setBackendMessage('Backend API is reachable.');
+    } catch {
+      setBackendStatus('offline');
+      setBackendMessage('Backend API is not reachable. Start it with `npm run backend`.');
+    }
+  }, []);
+
+  useEffect(() => {
+    void checkBackendStatus();
+  }, [checkBackendStatus]);
 
   const steps = [
     {
@@ -49,6 +71,28 @@ const SetupGuide: React.FC = () => {
           <p className="text-gray-600">
             Connect your Supabase database to enable user authentication and app storage
           </p>
+        </div>
+
+        <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-gray-900">Backend Integration Status</h3>
+              <p
+                className={`text-sm ${
+                  backendStatus === 'online'
+                    ? 'text-emerald-700'
+                    : backendStatus === 'offline'
+                      ? 'text-red-700'
+                      : 'text-gray-600'
+                }`}
+              >
+                {backendMessage}
+              </p>
+            </div>
+            <button onClick={() => void checkBackendStatus()} className="btn-secondary text-sm">
+              Recheck
+            </button>
+          </div>
         </div>
 
         {/* Progress Steps */}

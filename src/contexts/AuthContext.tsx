@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase, User } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, User } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   initialLoading: boolean;
   error: string | null;
+  isSupabaseConfigured: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,12 +29,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const ensureSupabase = useCallback(() => {
+    if (!supabase) {
+      throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    }
+    return supabase;
+  }, []);
+
+  const createUserProfile = useCallback(async (authUser: any) => {
+    try {
+      const userProfile = {
+        id: authUser.id,
+        email: authUser.email!,
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+        plan: 'free' as const,
+        avatar_url: authUser.user_metadata?.avatar_url,
+      };
+
+      const { data, error } = await ensureSupabase()
+        .from('users')
+        .insert([userProfile])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating user profile:', error);
+        // Use the profile data we tried to insert as fallback
+        setUser({
+          ...userProfile,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      } else {
+        setUser(data);
+      }
+    } catch (error) {
+      console.error('Error creating user profile:', error);
+      // Create a minimal user object as final fallback
+      setUser({
+        id: authUser.id,
+        email: authUser.email || '',
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+        plan: 'free',
+        avatar_url: authUser.user_metadata?.avatar_url,
+        created_at: authUser.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [ensureSupabase]);
+
   const fetchUserProfile = useCallback(async (userId: string) => {
     try {
       setError(null);
+
+      const client = ensureSupabase();
       
       // Verify auth user first
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      const { data: { user: authUser }, error: authError } = await client.auth.getUser();
       
       if (authError || !authUser) {
         console.error('Auth user verification failed:', authError);
@@ -43,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Fetch user profile
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('users')
         .select('*')
         .eq('id', userId)
@@ -86,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Try to get basic user info from auth as fallback
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const { data: { user: authUser } } = await ensureSupabase().auth.getUser();
         if (authUser) {
           console.log('Using auth user data as fallback after error...');
           setUser({
@@ -108,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setInitialLoading(false);
     }
-  }, []);
+  }, [createUserProfile, ensureSupabase]);
 
   useEffect(() => {
     let mounted = true;
@@ -116,11 +170,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const maxRetries = 3;
 
     const initializeAuth = async () => {
+      if (!isSupabaseConfigured) {
+        setError('Supabase is not configured. Please set environment variables.');
+        setInitialLoading(false);
+        return;
+      }
+
       try {
         setError(null);
         
         // Simple session check without aggressive timeouts
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await ensureSupabase().auth.getSession();
         
         if (!mounted) return;
         
@@ -166,7 +226,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
 
   // Listen for auth changes
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+  if (!isSupabaseConfigured) {
+    return () => {
+      mounted = false;
+    };
+  }
+
+  const { data: { subscription } } = ensureSupabase().auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
 
       try {
@@ -191,60 +257,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
-
-  
-
-  const createUserProfile = async (authUser: any) => {
-    try {
-      const userProfile = {
-        id: authUser.id,
-        email: authUser.email!,
-        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
-        plan: 'free' as const,
-        avatar_url: authUser.user_metadata?.avatar_url,
-      };
-
-      const { data, error } = await supabase
-        .from('users')
-        .insert([userProfile])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating user profile:', error);
-        // Use the profile data we tried to insert as fallback
-        setUser({
-          ...userProfile,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      } else {
-        setUser(data);
-      }
-    } catch (error) {
-      console.error('Error creating user profile:', error);
-      // Create a minimal user object as final fallback
-      setUser({
-        id: authUser.id,
-        email: authUser.email || '',
-        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
-        plan: 'free',
-        avatar_url: authUser.user_metadata?.avatar_url,
-        created_at: authUser.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-    } finally {
-      setInitialLoading(false);
-    }
-  };
+  }, [fetchUserProfile, ensureSupabase]);
 
   const signup = async (email: string, password: string, name: string) => {
     setLoading(true);
     setError(null);
     
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await ensureSupabase().auth.signUp({
         email,
         password,
         options: {
@@ -277,7 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await ensureSupabase().auth.signInWithPassword({
         email,
         password,
       });
@@ -300,7 +320,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await ensureSupabase().auth.signOut();
       
       if (error) {
         console.error('Logout error:', error);
@@ -313,7 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, loading, initialLoading, error }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, loading, initialLoading, error, isSupabaseConfigured }}>
       {children}
     </AuthContext.Provider>
   );

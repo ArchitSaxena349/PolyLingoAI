@@ -14,7 +14,7 @@ const AuthPage = () => {
   });
   const [localError, setLocalError] = useState('');
 
-  const { user, login, signup, loading, initialLoading } = useAuth();
+  const { user, login, signup, loading, initialLoading, isSupabaseConfigured } = useAuth();
 
   // Show loading spinner only during initial app load
   if (initialLoading) {
@@ -111,6 +111,20 @@ const AuthPage = () => {
           transition={{ duration: 0.6 }}
           className="app-card p-10"
         >
+          {!isSupabaseConfigured && (
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold">Supabase is not configured.</p>
+                  <p className="mt-1">
+                    Set <span className="font-mono">VITE_SUPABASE_URL</span> and <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> to enable authentication.
+                    <Link to="/setup" className="ml-1 text-amber-900 underline">Go to setup</Link>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Header */}
           <div className="text-center mb-10">
             <Link to="/" className="inline-flex items-center space-x-3 mb-8">
