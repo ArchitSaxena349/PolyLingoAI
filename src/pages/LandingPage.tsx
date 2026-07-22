@@ -327,7 +327,7 @@ const LandingPage: React.FC = () => {
       role: 'Head of Product',
       company: 'OmniGlobal Inc.',
       content: 'PolyLingo AI revolutionized our customer onboarding. We created support bots in 6 languages in under an hour!',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b332e234?w=128&h=128&fit=crop&crop=face',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&h=128&fit=crop&crop=face',
       rating: 5,
     },
     {
