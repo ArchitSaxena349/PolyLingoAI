@@ -801,9 +801,26 @@ const LandingPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center text-xs font-semibold text-emerald-400 group-hover:text-emerald-300 group-hover:translate-x-1 transition-transform">
-                  <span>Learn more</span>
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (feature.tab) {
+                        setActiveDemoTab(feature.tab as any);
+                        const demoElement = document.getElementById('demo');
+                        if (demoElement) {
+                          demoElement.scrollIntoView({ behavior: 'smooth' });
+                          return;
+                        }
+                      }
+                      navigate(feature.link);
+                    }}
+                    className="inline-flex items-center text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-2 rounded-xl hover:bg-emerald-500/20 hover:border-emerald-400 group-hover:translate-x-1 transition-all"
+                  >
+                    <span>Learn more</span>
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </button>
                 </div>
               </motion.div>
             ))}
