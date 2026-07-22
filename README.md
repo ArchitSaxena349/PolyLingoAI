@@ -1,175 +1,142 @@
-# PolyLingo AI
-
 <div align="center">
-  <img src="https://img.shields.io/badge/TypeScript-93.2%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/React-18.3.1-61dafb" alt="React">
-  <img src="https://img.shields.io/badge/Vite-7.3.1-646cff" alt="Vite">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
+
+# 🌐 PolyLingo AI
+
+### *Build & Deploy Intelligent Multilingual AI Apps Without Writing Code*
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.3-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Vitest](https://img.shields.io/badge/Vitest-4.1-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+---
+
+[🚀 **Live Demo**](https://poly-lingo-ai.vercel.app/) &nbsp;|&nbsp;
+[✨ **Key Features**](#-key-features) &nbsp;|&nbsp;
+[⚡ **Quick Start**](#-quick-start) &nbsp;|&nbsp;
+[🔌 **API Integrations**](#-api-integrations) &nbsp;|&nbsp;
+[📖 **Documentation**](#-project-structure)
+
+---
+
 </div>
 
-<p align="center">
-  <strong>Build Intelligent Multilingual AI Applications Without Code</strong>
-</p>
+<br/>
 
-<p align="center">
-  A visual app builder platform for creating AI-powered chatbots, voice synthesis apps, and multilingual applications with drag-and-drop simplicity.
-</p>
+## 📌 Overview
 
-<p align="center">
-  🌐 <a href="https://poly-lingo-ai.vercel.app/">Live Demo</a> | 
-  📚 <a href="#features">Features</a> | 
-  🚀 <a href="#getting-started">Getting Started</a>
-</p>
+**PolyLingo AI** is a state-of-the-art visual app builder platform that empowers creators, developers, and businesses to design, configure, and publish AI-powered applications effortlessly. With a drag-and-drop workflow canvas, real-time preview engine, multi-language localization, and voice cloning capabilities, PolyLingo AI turns complex AI integrations into seamless visual blocks.
+
+> [!NOTE]
+> PolyLingo AI handles frontend UI generation, AI prompt engineering, state management, voice synthesis, and deployment orchestration out-of-the-box.
 
 ---
 
-## 📑 Table of Contents
+## ✨ Key Features
 
-- [📸 Screenshots](#-screenshots)
-- [🌟 Features](#-features)
-- [🏗️ Tech Stack](#️-tech-stack)
-- [🚀 Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-- [📁 Project Structure](#-project-structure)
-- [🎯 Usage](#-usage)
-- [🔌 API Integrations](#-api-integrations)
-- [📜 Available Scripts](#-available-scripts)
-- [🚀 Deployment](#-deployment)
-- [🤝 Contributing](#-contributing)
-- [🐛 Known Issues & Troubleshooting](#-known-issues--troubleshooting)
-- [🗺️ Roadmap](#️-roadmap)
-- [📄 License](#-license)
-- [👨‍💻 Author](#-author)
-- [🙏 Acknowledgments](#-acknowledgments)
-- [📞 Support](#-support)
+| Feature | Description |
+| :--- | :--- |
+| ⚡ **Visual Drag & Drop Builder** | Design full-featured web app interfaces on an interactive grid canvas using pre-built AI components. |
+| 🤖 **AI Chatbot Engine** | Configure custom conversational AI agents with dynamic system prompts, context awareness, and instant response streaming. |
+| 🎙️ **Voice Cloning & Speech** | Integrate **ElevenLabs API** to synthesize natural voice audio or clone custom voice profiles for audio apps. |
+| 🌍 **Multilingual Localization** | Translate apps and conversations across 50+ languages instantly with **Lingo API** integration. |
+| 💸 **Built-in Monetization** | Set up paywalls, digital products, and subscription tiers using **RevenueCat**. |
+| 🚀 **One-Click Publishing** | Export and host deployed web apps instantly on Netlify or the PolyLingo Cloud runner. |
+| 🔒 **Authentication & Database** | Full user management and data persistence powered by **Supabase Auth & PostgreSQL**. |
+| 🎨 **Modern Sleek Aesthetics** | Dark-mode, glassmorphism UI built with **Tailwind CSS** and smooth **Framer Motion** micro-interactions. |
 
 ---
 
-## 📸 Screenshots
+## 🏗️ Architecture & Tech Stack
 
-> **Note**: Replace these placeholders with actual application screenshots for a better representation of the platform.
+```
+ ┌─────────────────────────────────────────────────────────┐
+ │                   PolyLingo AI Web App                  │
+ │          React 18  •  TypeScript  •  Tailwind           │
+ └──────────┬───────────────────────────┬──────────────────┘
+            │                           │
+            ▼                           ▼
+ ┌──────────────────────┐    ┌─────────────────────────────┐
+ │    Supabase Cloud    │    │      API Proxy Server       │
+ │ Auth & PostgreSQL DB │    │       Node.js (Port 8787)   │
+ └──────────────────────┘    └──────────┬──────────────────┘
+                                        │
+             ┌──────────────────────────┼──────────────────────────┐
+             ▼                          ▼                          ▼
+   ┌───────────────────┐      ┌───────────────────┐      ┌───────────────────┐
+   │  ElevenLabs API   │      │    Lingo API      │      │   RevenueCat API  │
+   │ (Voice Synthesis) │      │  (Translation)    │      │  (Monetization)   │
+   └───────────────────┘      └───────────────────┘      └───────────────────┘
+```
 
-<div align="center">
-  <img src="https://via.placeholder.com/800x450/4ade80/ffffff?text=Landing+Page" alt="Landing Page" width="800">
-  <p><em>Modern landing page with gradient design</em></p>
-</div>
-
-<div align="center">
-  <img src="https://via.placeholder.com/800x450/3b82f6/ffffff?text=App+Builder" alt="App Builder" width="800">
-  <p><em>Drag-and-drop visual app builder</em></p>
-</div>
-
-<div align="center">
-  <img src="https://via.placeholder.com/800x450/a855f7/ffffff?text=Dashboard" alt="Dashboard" width="800">
-  <p><em>User dashboard with app management</em></p>
-</div>
-
----
-
-## 🌟 Features
-
-### 🤖 AI-Powered Chatbots
-Build intelligent conversational AI with advanced natural language processing capabilities. Create sophisticated bots that understand context and provide meaningful responses.
-
-### 🎙️ Voice Synthesis & Cloning
-Integrate ElevenLabs API to clone and customize voices for realistic speech output. Perfect for accessibility features, audiobooks, and voice assistants.
-
-### 🌍 Multi-Language Support
-Automatic translation and localization using Lingo API. Deploy your applications to global audiences with seamless language switching.
-
-### ⚡ Drag & Drop Builder
-Intuitive visual interface to build complex applications without writing code. Simply drag components onto the canvas and configure them.
-
-### 💰 Monetization Ready
-Built-in payment processing and subscription management with RevenueCat integration. Start generating revenue from day one.
-
-### 📱 Mobile Export
-Generate React Native applications and deploy to app stores automatically. Build once, deploy everywhere.
+### Core Technologies
+- **Frontend Core**: React 18.3.1, TypeScript 5.5, Vite 7.3
+- **State & Drag-and-Drop**: React DnD (HTML5 Backend), React Context API
+- **Styling & UI**: Tailwind CSS 3.4, Framer Motion 10, Lucide React Icons
+- **Backend & Storage**: Supabase (PostgreSQL, Row Level Security, Auth)
+- **Node API Proxy Server**: Express-style Node.js runner (`server/api-server.mjs`)
+- **Testing & Quality**: Vitest 4.1, Testing Library, ESLint 9
 
 ---
 
-## 🏗️ Tech Stack
-
-- **Frontend Framework**: React 18.3.1 with TypeScript
-- **Build Tool**: Vite 7.3.1
-- **Styling**: Tailwind CSS 3.4.1 with custom gradient themes
-- **UI Components**: Headless UI, Framer Motion for animations
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
-- **Drag & Drop**: React DnD (HTML5 Backend)
-- **Routing**: React Router DOM v6
-- **Icons**: Lucide React
-
----
-
-## 🚀 Getting Started
+## ⚡ Quick Start
 
 ### Prerequisites
+Make sure you have installed on your local machine:
+- **Node.js** `>= 18.0.0`
+- **npm** `>= 9.0.0`
 
-- Node.js 16.x or higher
-- npm or yarn
-- Supabase account (for backend services)
+### 1. Clone the Repository
+```bash
+git clone https://github.com/ArchitSaxena349/PolyLingoAI.git
+cd PolyLingoAI
+```
 
-### Installation
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/ArchitSaxena349/PolyLingoAI.git
-   cd PolyLingoAI
-   ```
+### 3. Environment Setup
+Create a `.env` file in the root directory:
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```env
+# Supabase Client Configuration
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-3. **Configure environment variables**
-   
-   Create a `.env` file in the root directory with the following variables:
-   ```env
-   # Supabase Configuration (Required)
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   
-   # Backend API base URL (Optional - defaults to /api)
-   VITE_BACKEND_API_URL=http://localhost:8787/api
-   ```
-   
-   > **Security note**: Do not expose provider API keys in `VITE_` variables. Keep ElevenLabs/Lingo/RevenueCat/Tavus keys on your backend or Supabase Edge Functions.
-   >
-   > Add provider secrets to your backend environment (non-`VITE_`), for example:
-   > `ELEVENLABS_API_KEY`, `MAGIC_AI_API_KEY`, `LINGO_API_KEY`, `REVENUECAT_API_KEY`, `DAPPIER_API_KEY`, `TAVUS_API_KEY`, `RIVER_API_KEY`, `NETLIFY_ACCESS_TOKEN`.
+# Backend API Endpoint (Optional - defaults to http://localhost:8787/api)
+VITE_BACKEND_API_URL=http://localhost:8787/api
+```
 
-4. **Set up Supabase database**
-   
-   Install the Supabase CLI if you haven't already:
-   ```bash
-   npm install -g supabase
-   ```
-   
-   Then run the migrations:
-   ```bash
-   supabase db reset
-   # or
-   supabase migration up
-   ```
-   
-   Alternatively, you can manually execute the SQL migrations in your Supabase project dashboard.
+> [!IMPORTANT]
+> Provider secrets (e.g. ElevenLabs, Lingo, RevenueCat, Netlify) must be kept secure on your server or backend environment and **never** prefixed with `VITE_` in client bundles.
+> Add server secrets to your `.env` for the local backend proxy server:
+> ```env
+> ELEVENLABS_API_KEY=your_elevenlabs_key
+> LINGO_API_KEY=your_lingo_key
+> REVENUECAT_API_KEY=your_revenuecat_key
+> NETLIFY_ACCESS_TOKEN=your_netlify_token
+> ```
 
-5. **Start the backend API server**
-   ```bash
-   npm run backend
-   ```
+### 4. Run Development Servers
 
-6. **Start the frontend development server**
-   ```bash
-   npm run dev
-   ```
+Run frontend and backend simultaneously with one command:
+```bash
+npm start
+```
 
-7. **Open your browser**
-   
-   Navigate to `http://localhost:5173` to see the application running.
+Or run them individually in separate terminal windows:
+```bash
+# Terminal 1: Start Frontend Dev Server (http://localhost:5173)
+npm run dev
+
+# Terminal 2: Start Backend API Proxy (http://localhost:8787)
+npm run backend
+```
 
 ---
 
@@ -177,221 +144,153 @@ Generate React Native applications and deploy to app stores automatically. Build
 
 ```
 PolyLingoAI/
+├── server/                    # Node.js backend proxy server
+│   └── api-server.mjs         # API integration endpoints & deployment handlers
 ├── src/
-│   ├── components/         # Reusable React components
-│   │   ├── AIComponentGenerator.tsx
-│   │   ├── AppPreview.tsx
-│   │   ├── ComponentLibrary.tsx
-│   │   ├── DraggableComponent.tsx
-│   │   ├── DroppableCanvas.tsx
-│   │   ├── VoiceCloner.tsx
-│   │   └── ...
-│   ├── pages/             # Page components
-│   │   ├── LandingPage.tsx
-│   │   ├── AuthPage.tsx
-│   │   ├── Dashboard.tsx
-│   │   ├── AppBuilder.tsx
-│   │   └── SetupPage.tsx
-│   ├── contexts/          # React context providers
-│   │   ├── AuthContext.tsx
-│   │   └── AppBuilderContext.tsx
-│   ├── lib/               # Utility libraries and configurations
-│   │   ├── supabase.ts
-│   │   └── integrations.ts
-│   ├── App.tsx            # Main application component
-│   └── main.tsx           # Application entry point
-├── supabase/              # Supabase migrations and config
+│   ├── components/            # Reusable UI & App Builder components
+│   │   ├── AIComponentGenerator.tsx  # Dynamic component generator
+│   │   ├── AppPreview.tsx            # Live app renderer
+│   │   ├── ComponentLibrary.tsx      # Sidebar component palette
+│   │   ├── DraggableComponent.tsx    # Drag container element
+│   │   ├── DroppableCanvas.tsx       # Visual workspace grid
+│   │   ├── VoiceCloner.tsx           # ElevenLabs voice clone utility
+│   │   └── Navbar.tsx                # App navigation bar
+│   ├── contexts/              # React Context Providers
+│   │   ├── AppBuilderContext.tsx     # Canvas state, history & undo/redo
+│   │   └── AuthContext.tsx           # Supabase user authentication
+│   ├── lib/                   # Integrations & client configuration
+│   │   ├── supabase.ts           # Supabase JS client instantiation
+│   │   └── integrations.ts       # External API client services
+│   ├── pages/                 # Main Application Pages
+│   │   ├── AppBuilder.tsx        # Drag-and-drop workspace page
+│   │   ├── AuthPage.tsx          # Login & registration page
+│   │   ├── Dashboard.tsx         # User projects dashboard
+│   │   ├── LandingPage.tsx       # High-converting marketing landing page
+│   │   └── SetupPage.tsx         # Initial setup & configuration page
+│   ├── App.tsx                # React Router root component
+│   └── main.tsx               # DOM entry point
+├── supabase/                  # Database migrations & schemas
 │   └── migrations/
-├── public/                # Static assets
-└── ...
+├── vite.config.ts             # Vite & Vitest configuration
+└── package.json               # Package dependencies & scripts
 ```
 
 ---
 
-## 🎯 Usage
+## 🛠️ How It Works
 
-### Creating Your First App
+```
+ ┌──────────────────────┐      ┌──────────────────────┐      ┌──────────────────────┐
+ │  1. Select & Drag   │ ---> │ 2. Configure & Tune  │ ---> │  3. Preview & Deploy │
+ │ Components to Canvas │      │ Prompts, Voice & AI  │      │ Instant Cloud Host   │
+ └──────────────────────┘      └──────────────────────┘      └──────────────────────┘
+```
 
-1. **Sign up or log in** to your account
-2. Navigate to the **Dashboard**
-3. Click **"Create New App"**
-4. Use the **drag-and-drop builder** to add components
-5. Configure each component's properties in the settings panel
-6. **Preview** your app in real-time
-7. **Publish** when ready
-
-### Building an AI Chatbot
-
-1. Drag the **Chat** component onto the canvas
-2. Configure the AI model settings
-3. Add conversation flows and response templates
-4. Test the chatbot in the preview pane
-5. Deploy to production
-
-### Adding Voice Synthesis
-
-1. Navigate to the **Voice Cloner** section
-2. Upload voice samples or select from the library
-3. Integrate the voice into your app components
-4. Configure speech synthesis settings
-5. Test and fine-tune the voice output
+1. **Build Canvas**: Drag components like Chat Interfaces, Voice Players, Translators, and Text Cards directly onto the responsive grid workspace.
+2. **Configure Props**: Customize properties, prompt behaviors, voice parameters, and UI themes in the real-time configuration sidebar.
+3. **Interactive Testing**: Switch between **Edit Mode** and **Preview Mode** to interact with your live app before publishing.
+4. **Publish & Share**: Deploy with a single click to generate a shareable web link.
 
 ---
 
 ## 🔌 API Integrations
 
-### Supabase
+### 1. Supabase (Auth & Database)
+Provides identity management and data storage for saved app projects, custom prompt flows, and user profiles.
+- **SQL Migrations**: Located under `supabase/migrations/`
+- **Documentation**: [Supabase Docs](https://supabase.com/docs)
 
-PolyLingo AI uses Supabase for:
-- **Authentication**: User sign-up, login, and session management
-- **Database**: PostgreSQL for storing app configurations, user data, and voice clones
-- **Real-time**: Live updates and collaboration features
+### 2. ElevenLabs (Voice Synthesis)
+Powers text-to-speech rendering and custom voice clone generation.
+- **Endpoints**: Proxied through `/api/integrations/elevenlabs`
+- **Documentation**: [ElevenLabs API Docs](https://elevenlabs.io/docs/api-reference/quick-start)
 
-**Setup**:
-1. Create a [Supabase account](https://supabase.com)
-2. Create a new project
-3. Copy your project URL and anon key to the `.env` file
-4. Run the migrations to set up the database schema
+### 3. Lingo API (Localization)
+Translates interface strings and live chat conversations across languages.
+- **Endpoints**: Proxied through `/api/integrations/lingo`
 
-### ElevenLabs API
-
-Voice synthesis and cloning capabilities:
-- Clone voices from audio samples
-- Generate natural-sounding speech
-- Customize voice parameters
-- Multiple language support
-
-**Setup**:
-1. Sign up at [ElevenLabs](https://elevenlabs.io/)
-2. Get your API key from the dashboard
-3. Store the key on your backend (not in frontend env vars)
-4. Expose a backend endpoint under `VITE_BACKEND_API_URL` for voice operations
-5. [API Documentation](https://docs.elevenlabs.io/)
-
-### Lingo API
-
-Translation and localization:
-- Automatic content translation
-- Multi-language support
-- Context-aware translations
-- Real-time language switching
-
-**Setup**:
-1. Register for Lingo API access
-2. Obtain your API key
-3. Store the key on your backend and expose translation endpoints to the frontend
-
-### RevenueCat
-
-Monetization and subscription management:
-- In-app purchases
-- Subscription plans (Free/Pro)
-- Payment processing
-- Revenue analytics
-
-**Setup**:
-1. Create an account at [RevenueCat](https://www.revenuecat.com/)
-2. Configure your products and subscription plans
-3. Get your API key
-4. Store the key on your backend and proxy requests from authenticated clients
-5. [Integration Guide](https://docs.revenuecat.com/)
+### 4. RevenueCat (Monetization)
+Enables subscription access control and digital product paywalls for deployed apps.
+- **Documentation**: [RevenueCat Docs](https://www.revenuecat.com/docs)
 
 ---
 
 ## 📜 Available Scripts
 
-- **`npm run dev`** - Start development server
-- **`npm run backend`** - Start backend integration proxy server (`/api`)
-- **`npm run build`** - Build for production
-- **`npm run preview`** - Preview production build locally
-- **`npm run lint`** - Run ESLint for code quality checks
+In the project directory, you can run:
+
+| Command | Action |
+| :--- | :--- |
+| `npm start` | Launches **both** frontend dev server and backend API proxy concurrently. |
+| `npm run dev` | Runs the Vite frontend development server (`http://localhost:5173`). |
+| `npm run backend` | Runs the Node.js API integration proxy server (`http://localhost:8787`). |
+| `npm run build` | Compiles and bundles production static assets into `dist/`. |
+| `npm run test` | Executes unit tests using Vitest (`vitest run`). |
+| `npm run test:watch` | Runs Vitest in interactive watch mode. |
+| `npm run lint` | Performs ESLint code quality checks across the codebase. |
 
 ---
 
 ## 🚀 Deployment
 
-### Deploy to Vercel
+### Deploying to Vercel
 
-1. Push your code to GitHub
-2. Import the repository in [Vercel](https://vercel.com)
-3. Configure environment variables in Vercel dashboard:
-   - Go to Project Settings > Environment Variables
-   - Add all required variables from your `.env` file
-4. Enable automatic deployments (optional):
-   - Go to Project Settings > Git
-   - Enable "Automatic Deployments" for your branch
-5. Deploy - Vercel will automatically deploy on every push if enabled
+1. Push your repository to GitHub.
+2. Import the project into [Vercel](https://vercel.com).
+3. Configure environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) in the Vercel Project Settings.
+4. Vercel automatically detects Vite and deploys your frontend application.
 
-### Deploy to Netlify
+### Deploying to Netlify
 
-1. Connect your GitHub repository to [Netlify](https://www.netlify.com)
-2. Set build command: `npm run build`
-3. Set publish directory: `dist`
-4. Add environment variables
-5. Deploy
+1. Link your GitHub repository to [Netlify](https://www.netlify.com).
+2. Set build command to `npm run build` and output directory to `dist`.
+3. Add required environment variables in Netlify Dashboard.
+4. Deploy!
 
 ---
 
-## 🤝 Contributing
+## 🧪 Testing
 
-We welcome contributions! Here's how you can help:
+PolyLingo AI features automated unit tests covering key context providers, integration libraries, and UI boundary components:
 
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Make your changes**
-4. **Commit your changes**
-   ```bash
-   git commit -m 'Add some amazing feature'
-   ```
-5. **Push to the branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-6. **Open a Pull Request**
+```bash
+# Run test suite
+npm run test
+```
 
-Please ensure your code follows the existing code style and includes appropriate tests.
-
----
-
-## 🐛 Known Issues & Troubleshooting
-
-### Common Issues
-
-**Issue**: Environment variables not loading
-- **Solution**: Ensure `.env` file is in the root directory and variables are prefixed with `VITE_`
-
-**Issue**: Supabase connection errors
-- **Solution**: Verify your Supabase URL and anon key are correct and your Supabase project is active
-
-**Issue**: Build errors
-- **Solution**: Clear `node_modules` and run `npm install` again
+Tests use **Happy DOM** for rapid DOM simulation and **Vitest** for fast execution.
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] Core drag-and-drop app builder
-- [x] Supabase authentication and database integration
-- [x] Voice synthesis integration (ElevenLabs)
-- [x] Multi-language support (Lingo API)
-- [x] Component library with AI, chat, and voice components
-- [ ] Real-time collaboration features
-- [ ] Advanced AI model customization
-- [ ] Template marketplace
-- [ ] Mobile app builder enhancements
-- [ ] Analytics dashboard
-- [ ] Team management and permissions
-- [ ] Custom domain support
-- [ ] A/B testing capabilities
+- [x] Drag-and-Drop visual canvas builder
+- [x] AI Chatbot, Voice Synthesizer & Translator components
+- [x] Supabase Authentication & PostgreSQL persistence
+- [x] ElevenLabs voice synthesis & cloning integration
+- [x] Netlify & live runner deployment pipeline
+- [ ] Real-time multi-user canvas collaboration
+- [ ] Custom domain mapping for published apps
+- [ ] Pre-built community template marketplace
+- [ ] Advanced analytics & user engagement dashboard
+
+---
+
+## 🤝 Contributing
+
+Contributions make the open-source community an incredible place to learn, inspire, and create. Any contributions you make are **greatly appreciated**!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
 
 ---
 
@@ -400,28 +299,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Archit Saxena**
 - GitHub: [@ArchitSaxena349](https://github.com/ArchitSaxena349)
 
----
-
-## 🙏 Acknowledgments
-
-- [React](https://reactjs.org/) - Frontend framework
-- [Vite](https://vitejs.dev/) - Build tool
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [Supabase](https://supabase.com/) - Backend infrastructure
-- [ElevenLabs](https://elevenlabs.io/) - Voice synthesis
-- [Framer Motion](https://www.framer.com/motion/) - Animations
-
----
-
-## 📞 Support
-
-For support, questions, or feedback:
-- Open an issue on [GitHub Issues](https://github.com/ArchitSaxena349/PolyLingoAI/issues)
-- Visit the [Live Demo](https://poly-lingo-ai.vercel.app/)
-
----
-
 <div align="center">
-  <p>Made with ❤️ by Archit Saxena</p>
-  <p>⭐ Star this repository if you find it helpful!</p>
+  <br/>
+  <sub>Built with ❤️ using React, Vite, TypeScript & Supabase</sub>
 </div>

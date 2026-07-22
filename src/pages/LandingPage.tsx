@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bot,
@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeDemoTab, setActiveDemoTab] = useState<'chatbot' | 'voice' | 'translate'>('chatbot');
   
