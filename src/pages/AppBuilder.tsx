@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Save,
@@ -8,46 +8,118 @@ import {
   Upload,
   ArrowLeft,
   Bot,
-  Palette,
-  Languages,
-  Volume2,
   Sparkles,
-  Download
+  Download,
+  Undo2,
+  Redo2
 } from 'lucide-react';
 import { useAppBuilder } from '../contexts/AppBuilderContext';
 import DroppableCanvas from '../components/DroppableCanvas';
 import ComponentLibrary from '../components/ComponentLibrary';
 import AppPreview from '../components/AppPreview';
+import AppSettings from '../components/AppSettings';
 import { useAuth } from '../contexts/AuthContext';
+import ErrorBoundary from '../components/ErrorBoundary';
+import { useToast } from '../contexts/ToastContext';
 
 const AppBuilder = () => {
   const { appId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
-  const { currentApp, loadApp, saveApp, publishApp, createNewApp } = useAppBuilder();
+  const {
+    currentApp,
+    loadApp,
+    saveApp,
+    publishApp,
+    createNewApp,
+    exportApp,
+    undo,
+    redo,
+    canUndo,
+    canRedo
+  } = useAppBuilder();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'components' | 'settings' | 'preview'>('components');
+  const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const initializedRoute = useRef<string | undefined | null>(null);
 
   useEffect(() => {
+    if (initializedRoute.current === appId) return;
+    initializedRoute.current = appId;
+
     if (appId && appId !== 'new') {
       loadApp(appId);
     } else if (appId === 'new' || !appId) {
-      createNewApp();
+      if (!(location.state as { preserveCurrentApp?: boolean } | null)?.preserveCurrentApp) {
+        createNewApp();
+      }
     }
-  }, [appId, loadApp, createNewApp]);
+  }, [appId, loadApp, createNewApp, location.state]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(async () => {
+    if (!currentApp) return;
+    setIsSaving(true);
+    try {
+      await saveApp(currentApp);
+      toast.success('App changes saved successfully.', 'Saved');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save app changes.', 'Save Error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentApp, saveApp, toast]);
+
+  // Keyboard shortcut listener (Ctrl+Z: Undo, Ctrl+Y / Cmd+Shift+Z: Redo, Ctrl+S: Save)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      if (!isCtrlOrCmd) return;
+
+      if (e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          if (canRedo) {
+            e.preventDefault();
+            redo();
+            toast.info('Redone component action', 'Redo');
+          }
+        } else {
+          if (canUndo) {
+            e.preventDefault();
+            undo();
+            toast.info('Undone component action', 'Undo');
+          }
+        }
+      } else if (e.key.toLowerCase() === 'y') {
+        if (canRedo) {
+          e.preventDefault();
+          redo();
+          toast.info('Redone component action', 'Redo');
+        }
+      } else if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, undo, redo, handleSave, toast]);
+
+  const handleExport = () => {
     if (currentApp) {
-      saveApp(currentApp);
+      exportApp(currentApp);
+      toast.success(`Exported ${currentApp.title} JSON configuration.`, 'Exported');
     }
   };
 
   const handlePublish = async () => {
     if (!currentApp) return;
 
-    if (user?.plan === 'free' && !user) {
-      alert('Please upgrade to Pro to publish your apps!');
+    if (!user) {
+      toast.error('Please log in to publish your app.', 'Authentication Required');
       return;
     }
 
@@ -55,8 +127,10 @@ const AppBuilder = () => {
     try {
       const url = await publishApp(currentApp.id);
       setPublishedUrl(url);
+      toast.success('App successfully published to live URL!', 'Published');
     } catch (error) {
       console.error('Failed to publish app:', error);
+      toast.error('Failed to publish app. Please try again.', 'Publish Error');
     } finally {
       setIsPublishing(false);
     }
@@ -64,74 +138,105 @@ const AppBuilder = () => {
 
   if (!currentApp) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+          <p className="text-slate-400 text-xs font-medium">Loading App Workspace...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Top Bar */}
-      <header className="nav-glass border-b border-white/20">
-        <div className="flex items-center justify-between px-6 py-4">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-emerald-500 selection:text-white">
+      {/* Background Ambient Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]"></div>
+        <div className="absolute bottom-1/3 left-10 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[140px]"></div>
+      </div>
+
+      {/* Top Bar Header */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/90 border-b border-slate-800">
+        <div className="flex items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-3 hover:bg-white/20 rounded-xl transition-colors"
+              className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl transition-colors"
+              title="Back to Dashboard"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-700" />
+              <ArrowLeft className="w-4 h-4 text-emerald-400" />
             </button>
 
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {currentApp.title}
+              <h1 className="text-lg font-extrabold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent flex items-center gap-2">
+                {currentApp.title} <Sparkles className="w-4 h-4 text-emerald-400" />
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs text-slate-400">
                 Last saved: {new Date(currentApp.updated_at).toLocaleTimeString()}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Undo / Redo Toolbar Controls */}
+            <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1">
+              <button
+                onClick={undo}
+                disabled={!canUndo}
+                className="p-2 hover:bg-slate-800 text-slate-300 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={redo}
+                disabled={!canRedo}
+                className="p-2 hover:bg-slate-800 text-slate-300 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                title="Redo (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
+
             <button
               onClick={handleSave}
-              className="btn-secondary flex items-center gap-2"
+              disabled={isSaving}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
             >
-              <Save className="w-4 h-4" />
-              Save
+              <Save className="w-4 h-4 text-emerald-400" />
+              {isSaving ? 'Saving…' : 'Save'}
             </button>
 
             <button
               onClick={() => setActiveTab('preview')}
-              className="btn-secondary flex items-center gap-2"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-4 h-4 text-cyan-400" />
               Preview
             </button>
 
-            <div className="flex bg-white/10 rounded-lg p-1">
+            <div className="flex bg-slate-900 border border-slate-800 rounded-xl overflow-hidden p-0.5">
               <button
-                onClick={() => exportApp(currentApp)}
-                className="btn-secondary flex items-center gap-2 rounded-r-none border-r border-white/20"
+                onClick={handleExport}
+                className="px-3 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5 transition-colors border-r border-slate-800"
                 title="Download JSON"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5 text-slate-400" />
                 Export
               </button>
               <button
                 onClick={handlePublish}
                 disabled={isPublishing}
-                className="btn-primary flex items-center gap-2 rounded-l-none"
+                className="px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20"
               >
                 {isPublishing ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Publish
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-slate-950"></div>
+                    Publishing...
                   </>
                 ) : (
                   <>
-                    <Upload className="w-4 h-4" />
+                    <Upload className="w-3.5 h-3.5" />
                     Publish
                   </>
                 )}
@@ -141,11 +246,11 @@ const AppBuilder = () => {
         </div>
       </header>
 
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden relative z-10">
         {/* Left Sidebar */}
-        <div className="w-80 sidebar-glass flex flex-col">
+        <div className="w-80 bg-slate-900/90 border-r border-slate-800 backdrop-blur-xl flex flex-col">
           {/* Sidebar Tabs */}
-          <div className="flex border-b border-white/20">
+          <div className="flex border-b border-slate-800 bg-slate-950/60">
             {[
               { id: 'components', label: 'Components', icon: Bot },
               { id: 'settings', label: 'Settings', icon: Settings },
@@ -154,10 +259,11 @@ const AppBuilder = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-4 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeTab === tab.id
-                  ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50/50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/20'
-                  }`}
+                className={`flex-1 px-3 py-3.5 text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  activeTab === tab.id
+                    ? 'text-emerald-400 border-b-2 border-emerald-500 bg-slate-900/90'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/40'
+                }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -166,152 +272,134 @@ const AppBuilder = () => {
           </div>
 
           {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-none">
             {activeTab === 'components' && <ComponentLibrary />}
             {activeTab === 'settings' && (
-              <div className="p-6 space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    App Title
-                  </label>
-                  <input
-                    type="text"
-                    value={currentApp.title}
-                    onChange={(e) => {
-                      const updatedApp = { ...currentApp, title: e.target.value };
-                      saveApp(updatedApp);
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-                  />
+              <div className="p-6 space-y-4">
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 text-emerald-400 text-xs flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 flex-shrink-0" />
+                  <span>Configuring app settings & theme in main workspace.</span>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Description
-                  </label>
-                  <textarea
-                    value={currentApp.description}
-                    onChange={(e) => {
-                      const updatedApp = { ...currentApp, description: e.target.value };
-                      saveApp(updatedApp);
-                    }}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-                  />
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs space-y-3">
+                  <h4 className="font-bold text-white mb-2 uppercase tracking-wider text-[11px]">Settings Sections</h4>
+                  <div className="space-y-2 text-slate-400">
+                    <div className="flex items-center gap-2 text-white">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" /> Basic Metadata
+                    </div>
+                    <div className="flex items-center gap-2 text-white">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400" /> Brand Color Palette
+                    </div>
+                    <div className="flex items-center gap-2 text-white">
+                      <div className="w-2 h-2 rounded-full bg-purple-400" /> Voice & Localization
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    <Palette className="w-4 h-4 inline mr-2" />
-                    Primary Color
-                  </label>
-                  <input
-                    type="color"
-                    value={currentApp.settings.primaryColor}
-                    onChange={(e) => {
-                      const updatedApp = {
-                        ...currentApp,
-                        settings: { ...currentApp.settings, primaryColor: e.target.value }
-                      };
-                      saveApp(updatedApp);
-                    }}
-                    className="w-20 h-12 border border-gray-300 rounded-xl cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    <Languages className="w-4 h-4 inline mr-2" />
-                    Default Language
-                  </label>
-                  <select
-                    value={currentApp.settings.language}
-                    onChange={(e) => {
-                      const updatedApp = {
-                        ...currentApp,
-                        settings: { ...currentApp.settings, language: e.target.value }
-                      };
-                      saveApp(updatedApp);
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-                  >
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                    <option value="zh">Chinese</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    <Volume2 className="w-4 h-4 inline mr-2" />
-                    Voice Setting
-                  </label>
-                  <select
-                    value={currentApp.settings.voice}
-                    onChange={(e) => {
-                      const updatedApp = {
-                        ...currentApp,
-                        settings: { ...currentApp.settings, voice: e.target.value }
-                      };
-                      saveApp(updatedApp);
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-                  >
-                    <option value="default">Default Voice</option>
-                    <option value="elevenlabs-clara">ElevenLabs - Clara</option>
-                    <option value="elevenlabs-james">ElevenLabs - James</option>
-                    <option value="custom">Custom Voice</option>
-                  </select>
-                </div>
+                <button
+                  onClick={() => setActiveTab('components')}
+                  className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl border border-slate-800 transition-colors"
+                >
+                  Return to Canvas Editor
+                </button>
               </div>
             )}
-            {activeTab === 'preview' && <AppPreview app={currentApp} />}
+            {activeTab === 'preview' && (
+              <div className="p-6 space-y-4">
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 text-emerald-400 text-xs flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 flex-shrink-0" />
+                  <span>Viewing live interactive preview in main workspace.</span>
+                </div>
+
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs space-y-3">
+                  <h4 className="font-bold text-white mb-2 uppercase tracking-wider text-[11px]">App Specifications</h4>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Total Components:</span>
+                    <strong className="text-white">{currentApp.components.length}</strong>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Default Language:</span>
+                    <strong className="text-cyan-400">{(currentApp.settings.language || 'en').toUpperCase()}</strong>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Voice Model:</span>
+                    <strong className="text-purple-400">{currentApp.settings.voice || 'Default'}</strong>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Status:</span>
+                    <strong className="text-emerald-400">{currentApp.published ? 'Published' : 'Draft'}</strong>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setActiveTab('components')}
+                  className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl border border-slate-800 transition-colors"
+                >
+                  Return to Canvas Editor
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Main Canvas */}
-        <div className="flex-1 p-8">
-          <DroppableCanvas app={currentApp} />
+        {/* Main Canvas / Preview / Settings Workspace Area */}
+        <div className="flex-1 p-6 flex flex-col bg-slate-950 overflow-hidden">
+          <div className="flex-1 bg-slate-900/80 border border-slate-800 rounded-3xl shadow-2xl overflow-y-auto relative backdrop-blur-xl">
+            <ErrorBoundary title="App Workspace Rendering Error">
+              {activeTab === 'preview' ? (
+                <AppPreview app={currentApp} />
+              ) : activeTab === 'settings' ? (
+                <AppSettings />
+              ) : (
+                <DroppableCanvas />
+              )}
+            </ErrorBoundary>
+          </div>
         </div>
       </div>
 
-      {/* Publish Success Modal */}
+      {/* Published URL Modal */}
       {publishedUrl && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="app-card p-10 max-w-md w-full mx-4"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl text-slate-100"
           >
-            <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Sparkles className="w-10 h-10 text-white" />
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-400">
+                <Upload className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                App Published Successfully!
-              </h3>
-              <p className="text-gray-600 mb-8">
-                Your app is now live and accessible at:
+              <h3 className="text-xl font-bold text-white mb-2">App Published!</h3>
+              <p className="text-slate-400 text-xs">
+                Your application is live and accessible at the following URL:
               </p>
-              <div className="bg-gray-50 rounded-xl p-4 mb-8">
-                <code className="text-sm text-emerald-600 break-all font-medium">{publishedUrl}</code>
-              </div>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => window.open(publishedUrl, '_blank')}
-                  className="btn-primary flex-1"
-                >
-                  Visit App
-                </button>
-                <button
-                  onClick={() => setPublishedUrl(null)}
-                  className="btn-secondary flex-1"
-                >
-                  Close
-                </button>
-              </div>
+            </div>
+
+            <div className="bg-slate-950 rounded-xl p-3.5 mb-6 border border-slate-800">
+              <input
+                type="text"
+                value={publishedUrl}
+                readOnly
+                className="w-full bg-transparent text-xs text-emerald-400 focus:outline-none select-all"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <a
+                href={publishedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg flex-1 text-center transition-colors"
+              >
+                Visit App
+              </a>
+              <button
+                onClick={() => setPublishedUrl(null)}
+                className="px-4 py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs rounded-xl border border-slate-800"
+              >
+                Close
+              </button>
             </div>
           </motion.div>
         </div>

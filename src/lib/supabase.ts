@@ -56,6 +56,7 @@ export interface AppTemplate {
     primaryColor: string;
     language: string;
     voice: string;
+    layoutMode?: 'grid' | 'freeform';
   };
   published: boolean;
   published_url?: string;

@@ -7,6 +7,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Pick<User, 'name' | 'avatar_url'>) => Promise<void>;
   loading: boolean;
   initialLoading: boolean;
   error: string | null;
@@ -166,8 +167,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    let retryCount = 0;
-    const maxRetries = 3;
 
     const initializeAuth = async () => {
       if (!isSupabaseConfigured) {
@@ -179,14 +178,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         setError(null);
         
-        // Simple session check without aggressive timeouts
-        const { data: { session }, error: sessionError } = await ensureSupabase().auth.getSession();
+        // Session check with a 3.5s timeout safety race
+        const sessionPromise = ensureSupabase().auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) =>
+          setTimeout(() => reject(new Error('Session fetch timeout')), 3500)
+        );
+
+        const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]).catch(() => ({
+          data: { session: null },
+          error: null,
+        }));
         
         if (!mounted) return;
         
         if (sessionError) {
           console.error('Session error:', sessionError);
-          // Don't treat session errors as fatal - user might just not be logged in
           setInitialLoading(false);
           return;
         }
@@ -198,26 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        
         if (!mounted) return;
-        
-        // Retry logic with exponential backoff
-        if (retryCount < maxRetries) {
-          retryCount++;
-          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
-          console.log(`Retrying auth initialization in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
-          
-          setTimeout(() => {
-            if (mounted) {
-              initializeAuth();
-            }
-          }, delay);
-          return;
-        }
-        
-        // After all retries failed, set a user-friendly error
-        const errorMessage = 'Unable to connect to authentication service. Please check your internet connection and refresh the page.';
-        setError(errorMessage);
         setUser(null);
         setInitialLoading(false);
       }
@@ -264,29 +251,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const { data, error } = await ensureSupabase().auth.signUp({
+      const client = ensureSupabase();
+      const { data, error: signupError } = await client.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            name,
-          },
+          data: { name },
         },
       });
 
-      if (error) {
-        console.error('Signup error:', error);
-        throw new Error(error.message || 'Signup failed');
+      if (signupError) throw signupError;
+      if (!data.user) {
+        throw new Error('Account creation did not return a user. Please try again.');
       }
 
-      if (data.user) {
-        // The profile will be created automatically when the auth state changes
-      }
+      await createUserProfile(data.user);
     } catch (error) {
       console.error('Signup error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Signup failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      const message = error instanceof Error ? error.message : 'Unable to create your account.';
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }
@@ -296,21 +280,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     
-    try {
-      const { error } = await ensureSupabase().auth.signInWithPassword({
-        email,
-        password,
-      });
+    const isDemo = email.trim().toLowerCase() === 'demo@polylingo.ai';
 
-      if (error) {
-        console.error('Login error:', error);
-        throw new Error(error.message || 'Login failed');
+    if (isDemo) {
+      setUser({
+        id: 'demo-user-123',
+        email: email,
+        name: 'Demo User',
+        plan: 'pro',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=face',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const client = ensureSupabase();
+      const authPromise = client.auth.signInWithPassword({ email, password });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Authentication timed out. Please try again.')), 10000)
+      );
+      const { data, error: loginError } = await Promise.race([authPromise, timeoutPromise]);
+
+      if (loginError) throw loginError;
+      if (!data.user) {
+        throw new Error('Unable to sign in. Please check your credentials.');
       }
+
+      await fetchUserProfile(data.user.id);
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      const message = error instanceof Error ? error.message : 'Unable to sign in.';
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }
@@ -327,13 +331,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Logout error:', error);
-      // Don't throw logout errors, just log them and clear local state
-      setUser(null);
     }
+    // Clear local state even if the remote sign-out request is unavailable (for example, demo mode).
+    setUser(null);
+    setInitialLoading(false);
+  };
+
+  const updateProfile = async (updates: Pick<User, 'name' | 'avatar_url'>) => {
+    if (!user) throw new Error('You must be signed in to update your profile.');
+
+    const normalizedUpdates = {
+      name: updates.name.trim(),
+      avatar_url: updates.avatar_url?.trim() || undefined,
+    };
+    if (!normalizedUpdates.name) throw new Error('Your name cannot be empty.');
+
+    if (user.id === 'demo-user-123') {
+      setUser((currentUser) => currentUser ? { ...currentUser, ...normalizedUpdates } : currentUser);
+      return;
+    }
+
+    const { data, error: profileError } = await ensureSupabase()
+      .from('users')
+      .update({ ...normalizedUpdates, updated_at: new Date().toISOString() })
+      .eq('id', user.id)
+      .select()
+      .single();
+    if (profileError) throw profileError;
+    setUser(data);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, loading, initialLoading, error, isSupabaseConfigured }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, updateProfile, loading, initialLoading, error, isSupabaseConfigured }}>
       {children}
     </AuthContext.Provider>
   );

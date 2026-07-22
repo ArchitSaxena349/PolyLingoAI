@@ -1,8 +1,9 @@
-import React from 'react';
-import { Bot, Mic, Globe, Type, MessageSquare, Image, Video, BarChart, Hand, Box } from 'lucide-react';
+import { Bot, Mic, Globe, Type, MessageSquare, Image, Video, BarChart, Hand, Box, Sparkles } from 'lucide-react';
 import DraggableComponent from './DraggableComponent';
+import { AppComponent, useAppBuilder } from '../contexts/AppBuilderContext';
 
 const ComponentLibrary = () => {
+  const { addComponent, currentApp } = useAppBuilder();
   const componentTypes = [
     {
       type: 'text-input',
@@ -85,17 +86,46 @@ const ComponentLibrary = () => {
 
   const categories = [...new Set(componentTypes.map(comp => comp.category))];
 
+  const defaultProps = (type: AppComponent['type']): Record<string, unknown> => {
+    switch (type) {
+      case 'text-input': return { placeholder: 'Enter your message...', label: 'Message' };
+      case 'voice-output': return { voice: 'default', text: 'Hello! How can I help you today?' };
+      case 'language-selection': return { languages: ['en', 'es', 'fr'], defaultLanguage: 'en' };
+      case 'ai-copilot': return { model: 'gpt-4', personality: 'helpful', greeting: 'Hi! I\'m here to help.' };
+      case 'image': return { src: '', alt: 'Image' };
+      case 'button': return { label: 'Click Me', variant: 'primary' };
+      case 'container': return { padding: '16px', background: '#0f172a', borderRadius: '12px' };
+      case 'video-player': return { src: '', autoplay: false };
+      case 'chat-interface': return { title: 'Chat Support', initialMessage: 'How can I help you?', theme: 'dark' };
+      case 'image-generator': return { promptLabel: 'Describe image...', buttonText: 'Generate' };
+      case 'analytics': return { title: 'App Usage', metric: 'views', chartType: 'line' };
+      default: return {};
+    }
+  };
+
+  const addFromLibrary = (type: AppComponent['type']) => {
+    const index = currentApp?.components.length || 0;
+    addComponent({ type, props: defaultProps(type), position: { x: 32 + index * 20, y: 32 + index * 20 } });
+  };
+
   return (
-    <div className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Component Library</h3>
+    <div className="p-5 space-y-6">
+      <div>
+        <h3 className="text-sm font-extrabold text-white mb-1 uppercase tracking-wider flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-emerald-400" /> Component Library
+        </h3>
+        <p className="text-[11px] text-slate-400">
+          Click or drag components directly onto your app builder canvas.
+        </p>
+      </div>
 
       {categories.map(category => (
-        <div key={category} className="mb-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-3 uppercase tracking-wide">
+        <div key={category} className="space-y-2.5">
+          <h4 className="text-[11px] font-extrabold text-emerald-400 uppercase tracking-widest px-1">
             {category}
           </h4>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {componentTypes
               .filter(comp => comp.category === category)
               .map(component => (
@@ -105,21 +135,12 @@ const ComponentLibrary = () => {
                   title={component.title}
                   description={component.description}
                   icon={component.icon}
+                  onAdd={() => addFromLibrary(component.type as AppComponent['type'])}
                 />
               ))}
           </div>
         </div>
       ))}
-
-      <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">Pro Features</h4>
-        <p className="text-xs text-blue-700 mb-3">
-          Upgrade to Pro to unlock advanced components and unlimited apps.
-        </p>
-        <button className="btn-primary text-xs px-3 py-1">
-          Upgrade Now
-        </button>
-      </div>
     </div>
   );
 };

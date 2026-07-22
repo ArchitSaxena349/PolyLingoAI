@@ -17,15 +17,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
+  // If the user is logged in (even via demo account), allow them through regardless
+  // of whether Supabase is configured
+  if (user) {
+    return <>{children}</>;
+  }
+
+  // No user at all — redirect to setup if Supabase isn't configured, otherwise to auth
   if (!isSupabaseConfigured) {
     return <Navigate to="/setup" replace />;
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <>{children}</>;
+  return <Navigate to="/auth" replace />;
 };
 
 export default ProtectedRoute;

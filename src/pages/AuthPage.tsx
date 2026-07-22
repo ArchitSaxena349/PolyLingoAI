@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Bot, Eye, EyeOff, Mail, Lock, User, Sparkles, Shield, Info, AlertCircle } from 'lucide-react';
+import { Bot, Eye, EyeOff, Mail, Lock, User, Sparkles, ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-const AuthPage = () => {
+const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,13 +16,12 @@ const AuthPage = () => {
 
   const { user, login, signup, loading, initialLoading, isSupabaseConfigured } = useAuth();
 
-  // Show loading spinner only during initial app load
   if (initialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+          <p className="text-slate-400 text-sm font-medium">Initializing PolyLingo AI Auth...</p>
         </div>
       </div>
     );
@@ -34,10 +33,8 @@ const AuthPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setLocalError('');
     
-    // Basic validation
     if (!formData.email || !formData.password) {
       setLocalError('Please fill in all required fields');
       return;
@@ -54,23 +51,18 @@ const AuthPage = () => {
       } else {
         await signup(formData.email, formData.password, formData.name);
       }
-      // Success - the auth context will handle navigation
     } catch (err) {
       console.error('Auth error:', err);
-      let errorMessage = 'An error occurred';
-      
+      let errorMessage = 'An error occurred during authentication';
       if (err instanceof Error) {
         if (err.message.includes('Invalid login credentials')) {
           errorMessage = 'Invalid email or password';
         } else if (err.message.includes('User already registered')) {
           errorMessage = 'An account with this email already exists';
-        } else if (err.message.includes('timeout') || err.message.includes('timed out')) {
-          errorMessage = 'Request timed out. Please check your connection and try again.';
         } else {
           errorMessage = err.message;
         }
       }
-      
       setLocalError(errorMessage);
     }
   };
@@ -80,246 +72,175 @@ const AuthPage = () => {
       ...prev,
       [e.target.name]: e.target.value
     }));
-    // Clear error when user starts typing
     if (localError) setLocalError('');
   };
 
   const fillDemoCredentials = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setFormData({
       email: 'demo@polylingo.ai',
       password: 'demo123',
-      name: ''
+      name: 'Demo User'
     });
     setLocalError('');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-40 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-cyan-500/20 rounded-full blur-3xl"></div>
-      </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      {/* Background Ambient Glows */}
+      <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none animate-pulse"></div>
+      <div className="absolute bottom-10 right-1/4 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none"></div>
 
-      <div className="max-w-md w-full relative z-10">
+      <div className="w-full max-w-md relative z-10">
+        {/* Top Logo */}
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-3 group mb-4">
+            <div className="w-12 h-12 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+              <Bot className="w-7 h-7 text-white" />
+            </div>
+            <span className="text-2xl font-extrabold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+              PolyLingo AI
+            </span>
+          </Link>
+          <h2 className="text-2xl font-bold text-white mb-1">
+            {isLogin ? 'Welcome Back' : 'Create Account'}
+          </h2>
+          <p className="text-xs text-slate-400">
+            {isLogin ? 'Access your AI app builder workspace' : 'Start building multilingual AI applications today'}
+          </p>
+        </div>
+
+        {/* Form Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="app-card p-10"
+          className="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-800 shadow-2xl"
         >
-          {!isSupabaseConfigured && (
-            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-semibold">Supabase is not configured.</p>
-                  <p className="mt-1">
-                    Set <span className="font-mono">VITE_SUPABASE_URL</span> and <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> to enable authentication.
-                    <Link to="/setup" className="ml-1 text-amber-900 underline">Go to setup</Link>.
-                  </p>
-                </div>
-              </div>
+          {/* Demo Mode Notification Badge */}
+          <div className="mb-6 p-3.5 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 text-slate-300">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>Instant Demo Access</span>
             </div>
-          )}
-          {/* Header */}
-          <div className="text-center mb-10">
-            <Link to="/" className="inline-flex items-center space-x-3 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Bot className="w-7 h-7 text-white" />
-              </div>
-              <span className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">PolyLingo AI</span>
-            </Link>
-            
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">
-              {isLogin ? 'Welcome back' : 'Create account'}
-            </h1>
-            <p className="text-gray-600 text-lg">
-              {isLogin 
-                ? 'Sign in to continue building amazing AI apps' 
-                : 'Start building AI apps in minutes'
-              }
-            </p>
+            <button
+              onClick={fillDemoCredentials}
+              className="text-xs font-bold text-emerald-400 hover:text-emerald-300 underline"
+            >
+              Fill Demo Login
+            </button>
           </div>
 
-          {/* Demo Login Info */}
-          {isLogin && (
-            <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200 rounded-xl p-5 mb-8">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-emerald-600" />
-                  <p className="text-sm font-semibold text-emerald-800">Try Demo Account:</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={fillDemoCredentials}
-                  disabled={loading}
-                  className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  Fill Form
-                </button>
-              </div>
-              <p className="text-sm text-emerald-700 mb-1">Email: demo@polylingo.ai</p>
-              <p className="text-sm text-emerald-700">Password: demo123</p>
+          {!isSupabaseConfigured && (
+            <div className="mb-6 p-3.5 bg-amber-500/10 rounded-2xl border border-amber-500/30 flex items-center gap-2.5 text-xs text-amber-300">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>Supabase environment not configured. Login using Demo Mode above.</span>
             </div>
           )}
 
-          {/* Info for new users */}
-          {!isLogin && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mb-8">
-              <div className="flex items-center gap-2 mb-2">
-                <Info className="w-5 h-5 text-blue-600" />
-                <p className="text-sm font-semibold text-blue-800">Getting Started:</p>
-              </div>
-              <p className="text-sm text-blue-700">
-                Create your account to start building AI-powered applications with our visual builder.
-              </p>
+          {localError && (
+            <div className="mb-6 p-3.5 bg-red-500/10 rounded-2xl border border-red-500/30 flex items-center gap-2.5 text-xs text-red-400">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{localError}</span>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div>
-                <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-3">
-                  Full Name
-                </label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Full Name</label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                   <input
                     type="text"
-                    id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    required={!isLogin}
-                    disabled={loading}
-                    className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm text-lg disabled:opacity-50"
-                    placeholder="Enter your full name"
+                    placeholder="John Doe"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-3">
-                Email Address
-              </label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                 <input
                   type="email"
-                  id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm text-lg disabled:opacity-50"
-                  placeholder="Enter your email"
+                  placeholder="user@example.com"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-3">
-                Password
-              </label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  id="password"
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="w-full pl-12 pr-14 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm text-lg disabled:opacity-50"
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
                 />
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowPassword(!showPassword);
-                  }}
-                  disabled={loading}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer z-10 disabled:opacity-50"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {localError && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  <p className="text-sm text-red-600 font-medium">{localError}</p>
-                </div>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 disabled:from-gray-400 disabled:via-gray-400 disabled:to-gray-400 text-white font-semibold px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg relative z-20"
+              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 mt-6 disabled:opacity-50"
             >
               {loading ? (
-                <div className="flex items-center justify-center gap-3">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  {isLogin ? 'Signing in...' : 'Creating account...'}
-                </div>
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-950"></div>
+                  <span>Processing...</span>
+                </>
               ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  {isLogin ? 'Sign In' : 'Create Account'}
-                </div>
+                <>
+                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
               )}
             </button>
           </form>
 
-          {/* Switch Mode */}
-          <div className="mt-8 text-center">
-            <p className="text-gray-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsLogin(!isLogin);
-                  setLocalError('');
-                  setFormData({ email: '', password: '', name: '' });
-                }}
-                disabled={loading}
-                className="ml-2 text-emerald-600 hover:text-emerald-700 font-semibold cursor-pointer disabled:opacity-50"
-              >
-                {isLogin ? 'Sign up' : 'Sign in'}
-              </button>
-            </p>
+          {/* Toggle Switch */}
+          <div className="mt-6 text-center pt-6 border-t border-slate-800">
+            <button
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setLocalError('');
+              }}
+              className="text-xs text-slate-400 hover:text-emerald-400 transition-colors"
+            >
+              {isLogin ? (
+                <span>Don't have an account? <strong className="text-emerald-400 underline">Sign Up Free</strong></span>
+              ) : (
+                <span>Already have an account? <strong className="text-emerald-400 underline">Sign In</strong></span>
+              )}
+            </button>
           </div>
         </motion.div>
 
-        {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-center mt-8"
-        >
-          <p className="text-sm text-gray-400">
-            By continuing, you agree to our{' '}
-            <a href="#" className="text-emerald-600 hover:text-emerald-700">Terms of Service</a>
-            {' '}and{' '}
-            <a href="#" className="text-emerald-600 hover:text-emerald-700">Privacy Policy</a>
-          </p>
-        </motion.div>
+        {/* Footer info */}
+        <div className="text-center mt-6 text-xs text-slate-500 flex items-center justify-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <span>Protected with Supabase RLS & End-to-End Encryption</span>
+        </div>
       </div>
     </div>
   );

@@ -5,19 +5,22 @@ import SetupGuide from '../components/SetupGuide';
 
 const SetupPage: React.FC = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       {/* Header */}
-      <header className="nav-glass">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <Link to="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+            <Link to="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
                 <Bot className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">PolyLingo AI</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">PolyLingo AI</span>
             </Link>
             
-            <Link to="/" className="btn-secondary flex items-center gap-2">
+            <Link
+              to="/"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-semibold flex items-center gap-2"
+            >
               <ArrowLeft className="w-4 h-4" />
               Back to Home
             </Link>
@@ -26,9 +29,9 @@ const SetupPage: React.FC = () => {
       </header>
 
       {/* Setup Content */}
-      <div className="py-12">
+      <main className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SetupGuide />
-      </div>
+      </main>
     </div>
   );
 };

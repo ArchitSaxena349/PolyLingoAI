@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
@@ -9,16 +9,15 @@ import {
   Mic,
   Globe,
   Smartphone,
-  Calendar,
-  Star,
-  Crown,
   LogOut,
   Settings,
-  User,
-  
   Users,
   Wand2,
-  Sparkles
+  Sparkles,
+  ExternalLink,
+  Trash2,
+  Copy,
+  FolderPlus
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBuilder } from '../contexts/AppBuilderContext';
@@ -27,17 +26,65 @@ import VoiceCloner from '../components/VoiceCloner';
 import CommunityEvents from '../components/CommunityEvents';
 import AIComponentGenerator from '../components/AIComponentGenerator';
 
-const Dashboard = () => {
-  const { user, logout } = useAuth();
-  const { apps, createNewApp, loading } = useAppBuilder();
+import { useToast } from '../contexts/ToastContext';
+
+const Dashboard: React.FC = () => {
+  const { user, logout, updateProfile } = useAuth();
+  const { apps, createNewApp, duplicateApp, deleteApp, loading } = useAppBuilder();
+  const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialTab = (location.state as { defaultTab?: 'apps' | 'voice' | 'community' | 'ai-tools' } | null)?.defaultTab || 'apps';
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBy, setFilterBy] = useState('all');
-  const [activeTab, setActiveTab] = useState<'apps' | 'voice' | 'community' | 'ai-tools'>('apps');
+  const [activeTab, setActiveTab] = useState<'apps' | 'voice' | 'community' | 'ai-tools'>(initialTab);
+  const [showSettings, setShowSettings] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const openSettings = () => {
+    setProfileName(user?.name || '');
+    setAvatarUrl(user?.avatar_url || '');
+    setShowSettings(true);
+  };
+
+  const handleSaveProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      await updateProfile({ name: profileName, avatar_url: avatarUrl });
+      toast.success('Your profile settings were saved.', 'Settings Updated');
+      setShowSettings(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save your settings.', 'Settings Error');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleCreateNew = () => {
-    createNewApp();
-    navigate('/builder');
+    toast.info('New untitled application template created.');
+    navigate('/builder/new');
+  };
+
+  const handleDuplicate = async (appId: string, title: string) => {
+    await duplicateApp(appId);
+    toast.success(`Duplicated "${title}" successfully.`);
+  };
+
+  const handleDelete = async (appId: string, title: string) => {
+    await deleteApp(appId);
+    toast.info(`Deleted "${title}".`);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/auth', { replace: true });
+    } catch {
+      navigate('/auth', { replace: true });
+    }
   };
 
   const filteredApps = apps.filter(app => {
@@ -59,61 +106,76 @@ const Dashboard = () => {
   };
 
   const handleVoiceCloned = (voiceId: string, voiceName: string) => {
-    console.log('Voice cloned:', { voiceId, voiceName });
-    // Handle voice cloning success
+    toast.success(`Voice "${voiceName}" (ID: ${voiceId.slice(0, 12)}...) cloned successfully!`, 'Voice Ready');
+    setActiveTab('apps');
   };
 
   const handleComponentGenerated = (component: any) => {
-    console.log('Component generated:', component);
-    // Handle AI-generated component
+    toast.success('AI Component generated successfully! Launching App Builder...', 'AI Generation');
+    createNewApp([{
+      type: 'custom',
+      props: {
+        prompt: component?.component?.props?.prompt || 'AI-generated component',
+        preview: component?.preview || '',
+      },
+      position: { x: 40, y: 40 },
+    }]);
+    navigate('/builder/new', { state: { preserveCurrentApp: true } });
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+          <p className="text-slate-400 text-sm font-medium">Loading Dashboard Workspace...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="nav-glass">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
+      {/* Background Ambient Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]"></div>
+        <div className="absolute bottom-1/3 left-10 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[140px]"></div>
+      </div>
+
+      {/* Header Bar */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
-              <Link to="/" className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+              <Link to="/" className="flex items-center gap-3 group">
+                <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
                   <Bot className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">PolyLingo AI</span>
+                <span className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+                  PolyLingo AI
+                </span>
               </Link>
-              
-              {user?.plan === 'pro' && (
-                <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-                  <Crown className="w-4 h-4" />
-                  Pro
-                </div>
-              )}
             </div>
             
-            <div className="flex items-center space-x-4">
-              <button className="btn-secondary flex items-center gap-2">
-                <Settings className="w-4 h-4" />
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={openSettings}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
+              >
+                <Settings className="w-4 h-4 text-emerald-400" />
                 Settings
               </button>
               
               <Menu as="div" className="relative">
-                <Menu.Button className="flex items-center space-x-3 p-3 rounded-xl hover:bg-white/50 transition-colors">
+                <Menu.Button className="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-slate-900 transition-colors border border-transparent hover:border-slate-800">
                   {user?.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.name} className="w-10 h-10 rounded-full" />
+                    <img src={user.avatar_url} alt={user.name} className="w-9 h-9 rounded-full object-cover border border-emerald-500" />
                   ) : (
-                    <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
+                    <div className="w-9 h-9 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center font-bold text-slate-950 text-sm">
+                      {user?.name?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
-                  <span className="text-sm font-semibold text-gray-700">{user?.name}</span>
+                  <span className="text-xs font-semibold text-slate-200 hidden sm:inline">{user?.name}</span>
                 </Menu.Button>
                 
                 <Transition
@@ -124,16 +186,16 @@ const Dashboard = () => {
                   leaveFrom="transform opacity-100 scale-100"
                   leaveTo="transform opacity-0 scale-95"
                 >
-                  <Menu.Items className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 py-2 z-50">
+                  <Menu.Items className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl py-2 z-50 text-xs">
                     <Menu.Item>
                       {({ active }) => (
                         <button
-                          onClick={logout}
+                          onClick={() => void handleSignOut()}
                           className={`${
-                            active ? 'bg-gray-100/50' : ''
-                          } flex items-center w-full px-4 py-3 text-sm text-gray-700 font-medium`}
+                            active ? 'bg-slate-800 text-red-400' : 'text-slate-300'
+                          } flex items-center w-full px-4 py-2.5 font-medium transition-colors`}
                         >
-                          <LogOut className="w-4 h-4 mr-3" />
+                          <LogOut className="w-4 h-4 mr-2.5 text-red-400" />
                           Sign out
                         </button>
                       )}
@@ -146,169 +208,151 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h1 className="text-4xl font-bold text-white mb-3">
-              Welcome back, {user?.name}! ✨
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
+        {/* Welcome Banner */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2 flex items-center gap-2">
+              Welcome back, {user?.name}! <Sparkles className="w-6 h-6 text-emerald-400" />
             </h1>
-            <p className="text-gray-300 text-lg">
-              Continue building amazing AI applications or explore new tools and features.
+            <p className="text-slate-400 text-sm">
+              Manage your visual AI applications, ElevenLabs voice clones, and automated translation workflows.
             </p>
-          </motion.div>
+          </div>
+
+          <button
+            onClick={handleCreateNew}
+            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all transform hover:-translate-y-0.5"
+          >
+            <Plus className="w-5 h-5" />
+            Create New App
+          </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="mb-10">
-          <nav className="flex space-x-2">
+        {/* Dashboard Navigation Tabs */}
+        <div className="mb-8 border-b border-slate-800 pb-4">
+          <nav className="flex space-x-3 overflow-x-auto scrollbar-none">
             {[
-              { id: 'apps', label: 'My Apps', icon: Smartphone, gradient: 'from-emerald-500 to-teal-500' },
-              { id: 'voice', label: 'Voice Cloning', icon: Mic, gradient: 'from-purple-500 to-pink-500' },
-              { id: 'community', label: 'Community', icon: Users, gradient: 'from-blue-500 to-cyan-500' },
-              { id: 'ai-tools', label: 'AI Tools', icon: Wand2, gradient: 'from-orange-500 to-red-500' }
+              { id: 'apps', label: 'My Applications', icon: Smartphone },
+              { id: 'voice', label: 'Voice Cloning Studio', icon: Mic },
+              { id: 'ai-tools', label: 'AI Generator Studio', icon: Wand2 },
+              { id: 'community', label: 'Community & Events', icon: Users }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-semibold text-xs transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg transform scale-105`
-                    : 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white hover:shadow-md'
+                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                    : 'bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                <tab.icon className="w-5 h-5" />
+                <tab.icon className="w-4 h-4" />
                 {tab.label}
               </button>
             ))}
           </nav>
         </div>
 
-        {/* Tab Content */}
+        {/* Tab Content Area */}
         {activeTab === 'apps' && (
-          <>
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-              {[
-                { label: 'Total Apps', value: apps.length, icon: Bot, gradient: 'from-emerald-500 to-teal-500' },
-                { label: 'Published', value: apps.filter(app => app.published).length, icon: Globe, gradient: 'from-blue-500 to-cyan-500' },
-                { label: 'This Month', value: 2, icon: Calendar, gradient: 'from-purple-500 to-pink-500' },
-                { label: 'Rating', value: '4.9', icon: Star, gradient: 'from-yellow-500 to-orange-500' }
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="app-card p-6 group hover:shadow-2xl"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 mb-1">{stat.label}</p>
-                      <p className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                        {stat.value}
-                        {stat.label === 'Rating' && <Star className="w-6 h-6 text-yellow-400 fill-current" />}
-                      </p>
-                    </div>
-                    <div className={`w-12 h-12 bg-gradient-to-r ${stat.gradient} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                      <stat.icon className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Apps Section */}
-            <div className="app-card p-8">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Applications</h2>
-                  <p className="text-gray-600">Manage and deploy your AI-powered apps</p>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search apps..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-                    />
-                  </div>
-                  
-                  <select
-                    value={filterBy}
-                    onChange={(e) => setFilterBy(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-                  >
-                    <option value="all">All Apps</option>
-                    <option value="published">Published</option>
-                    <option value="draft">Drafts</option>
-                  </select>
-                  
-                  <button onClick={handleCreateNew} className="btn-primary flex items-center gap-2">
-                    <Plus className="w-5 h-5" />
-                    New App
-                  </button>
+          <div className="space-y-8">
+              {/* Quick Stats Banner */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800">
+                <div className="text-slate-400 text-xs font-medium mb-1">Total Applications</div>
+                <div className="text-3xl font-extrabold text-white">{apps.length}</div>
+              </div>
+              <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800">
+                <div className="text-slate-400 text-xs font-medium mb-1">Published Apps</div>
+                <div className="text-3xl font-extrabold text-emerald-400">
+                  {apps.filter(a => a.published).length}
                 </div>
               </div>
-
-              {filteredApps.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-24 h-24 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Bot className="w-12 h-12 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                    {searchQuery || filterBy !== 'all' ? 'No apps found' : 'No apps yet'}
-                  </h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    {searchQuery || filterBy !== 'all' 
-                      ? 'Try adjusting your search or filter criteria.' 
-                      : 'Create your first AI-powered application to get started.'
-                    }
-                  </p>
-                  {!searchQuery && filterBy === 'all' && (
-                    <button onClick={handleCreateNew} className="btn-primary flex items-center gap-2 mx-auto">
-                      <Sparkles className="w-5 h-5" />
-                      Create Your First App
-                    </button>
-                  )}
+              <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800">
+                <div className="text-slate-400 text-xs font-medium mb-1">Draft Apps</div>
+                <div className="text-3xl font-extrabold text-cyan-400">
+                  {apps.filter(a => !a.published).length}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredApps.map((app, index) => (
-                    <motion.div
-                      key={app.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="app-card p-6 group cursor-pointer hover:shadow-2xl"
-                      onClick={() => navigate(`/builder/${app.id}`)}
-                    >
-                      <div className="flex items-start justify-between mb-6">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
-                            {app.title}
-                          </h3>
-                          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                            {app.description}
-                          </p>
-                        </div>
-                        
+              </div>
+              <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800">
+                <div className="text-slate-400 text-xs font-medium mb-1">AI Workspace</div>
+                <div className="text-3xl font-extrabold text-emerald-400 flex items-center gap-1.5">
+                  Unlocked
+                </div>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search applications..."
+                  className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {['all', 'published', 'draft'].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setFilterBy(filter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                      filterBy === filter
+                        ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* App Grid */}
+            {filteredApps.length === 0 ? (
+              <div className="bg-slate-900/60 rounded-3xl border border-slate-800 p-12 text-center max-w-md mx-auto">
+                <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-500">
+                  <FolderPlus className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">No Applications Found</h3>
+                <p className="text-xs text-slate-400 mb-6">
+                  {searchQuery ? 'No apps match your search parameters.' : 'Create your first AI application using our visual drag-and-drop builder.'}
+                </p>
+                <button
+                  onClick={handleCreateNew}
+                  className="px-5 py-2.5 bg-emerald-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg hover:bg-emerald-400 transition-colors"
+                >
+                  Create Application
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredApps.map((app) => (
+                  <motion.div
+                    key={app.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-slate-900 rounded-2xl border border-slate-800 p-6 flex flex-col justify-between hover:border-emerald-500/40 transition-all group shadow-xl"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                          app.published
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        }`}>
+                          {app.published ? 'Published' : 'Draft'}
+                        </span>
+
                         <Menu as="div" className="relative">
-                          <Menu.Button 
-                            className="p-2 rounded-lg hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="w-5 h-5 text-gray-600" />
+                          <Menu.Button className="p-1 text-slate-500 hover:text-white rounded-lg">
+                            <MoreVertical className="w-4 h-4" />
                           </Menu.Button>
-                          
                           <Transition
                             enter="transition ease-out duration-100"
                             enterFrom="transform opacity-0 scale-95"
@@ -317,97 +361,167 @@ const Dashboard = () => {
                             leaveFrom="transform opacity-100 scale-100"
                             leaveTo="transform opacity-0 scale-95"
                           >
-                            <Menu.Items className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 py-2 z-10">
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    className={`${
-                                      active ? 'bg-gray-100/50' : ''
-                                    } flex items-center w-full px-4 py-2 text-sm text-gray-700`}
-                                  >
-                                    Edit
-                                  </button>
-                                )}
+                            <Menu.Items className="absolute right-0 mt-2 w-36 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl py-1 z-50 text-xs focus:outline-none">
+                              <Menu.Item
+                                as="button"
+                                type="button"
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  void handleDuplicate(app.id, app.title);
+                                }}
+                                className="flex items-center w-full px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left font-medium"
+                              >
+                                <Copy className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                                Duplicate
                               </Menu.Item>
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    className={`${
-                                      active ? 'bg-gray-100/50' : ''
-                                    } flex items-center w-full px-4 py-2 text-sm text-gray-700`}
-                                  >
-                                    Duplicate
-                                  </button>
-                                )}
-                              </Menu.Item>
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    className={`${
-                                      active ? 'bg-gray-100/50' : ''
-                                    } flex items-center w-full px-4 py-2 text-sm text-red-600`}
-                                  >
-                                    Delete
-                                  </button>
-                                )}
+                              <Menu.Item
+                                as="button"
+                                type="button"
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  void handleDelete(app.id, app.title);
+                                }}
+                                className="flex items-center w-full px-3 py-2 text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors text-left font-medium"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                Delete
                               </Menu.Item>
                             </Menu.Items>
                           </Transition>
                         </Menu>
                       </div>
-                      
+
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">
+                        {app.title}
+                      </h3>
+                      <p className="text-xs text-slate-400 line-clamp-2 mb-6 min-h-[32px]">
+                        {app.description || 'No description provided.'}
+                      </p>
+
                       <div className="flex items-center gap-2 mb-6">
-                        {app.components.slice(0, 3).map((component, idx) => {
-                          const Icon = getComponentIcon(component.type);
+                        {app.components.slice(0, 3).map((comp) => {
+                          const IconComp = getComponentIcon(comp.type);
                           return (
-                            <div key={idx} className="w-8 h-8 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
-                              <Icon className="w-4 h-4 text-gray-600" />
+                            <div key={comp.id} className="w-7 h-7 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-400">
+                              <IconComp className="w-3.5 h-3.5 text-emerald-400" />
                             </div>
                           );
                         })}
                         {app.components.length > 3 && (
-                          <span className="text-xs text-gray-500 font-medium">
-                            +{app.components.length - 3} more
-                          </span>
+                          <span className="text-[10px] text-slate-500 font-semibold">+{app.components.length - 3} more</span>
                         )}
                       </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            app.published ? 'bg-emerald-400' : 'bg-yellow-400'
-                          }`} />
-                          <span className="text-sm font-medium text-gray-600">
-                            {app.published ? 'Published' : 'Draft'}
-                          </span>
-                        </div>
-                        
-                        <span className="text-xs text-gray-500">
-                          {new Date(app.updated_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-800 text-xs">
+                      <Link
+                        to={`/builder/${app.id}`}
+                        className="font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                      >
+                        <span>Edit in Builder</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Link>
+
+                      {app.published_url && (
+                        <a
+                          href={app.published_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-slate-400 hover:text-white underline text-[11px]"
+                        >
+                          Live Site
+                        </a>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'voice' && (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-3xl mx-auto py-4">
             <VoiceCloner onVoiceCloned={handleVoiceCloned} />
           </div>
         )}
 
-        {activeTab === 'community' && <CommunityEvents />}
-
         {activeTab === 'ai-tools' && (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-3xl mx-auto py-4">
             <AIComponentGenerator onComponentGenerated={handleComponentGenerated} />
           </div>
         )}
-      </div>
+
+        {activeTab === 'community' && (
+          <div className="py-4">
+            <CommunityEvents />
+          </div>
+        )}
+      </main>
+
+      {/* Profile Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl text-slate-100"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-emerald-400" />
+                Account Settings
+              </h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-slate-500 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Display Name</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Avatar Image URL</label>
+                <input
+                  type="text"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition-colors"
+                >
+                  {isSavingProfile ? 'Saving...' : 'Save Settings'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(false)}
+                  className="px-4 py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs rounded-xl border border-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

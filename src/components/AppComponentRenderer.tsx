@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bot,
   Mic,
@@ -11,28 +11,73 @@ import {
   Move,
   Play,
   Pause,
-  Image,
+  Image as ImageIcon,
   Hand,
   Box,
   Video,
   BarChart,
-  Sparkles
+  Sparkles,
+  Copy,
+  Send,
+  CheckCircle2
 } from 'lucide-react';
 import { AppComponent } from '../contexts/AppBuilderContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface AppComponentRendererProps {
   component: AppComponent;
   onUpdate: (updates: Partial<AppComponent>) => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
+  isGridMode?: boolean;
 }
 
 const AppComponentRenderer: React.FC<AppComponentRendererProps> = ({
   component,
   onUpdate,
-  onDelete
+  onDelete,
+  onDuplicate,
 }) => {
+  const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Interactive local states for canvas preview
+  const [inputValue, setInputValue] = useState('');
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'ai' | 'user'; text: string }>>([
+    { sender: 'ai', text: component.props.initialMessage || component.props.greeting || 'Hello! How can I help you today?' }
+  ]);
+
+  const handleSpeak = (textToSpeak: string) => {
+    if (!('speechSynthesis' in window)) {
+      toast.info('Text-to-speech preview is simulated.');
+      setIsPlaying(!isPlaying);
+      return;
+    }
+
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+    } else {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(textToSpeak || 'Hello from PolyLingo AI');
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+      setIsPlaying(true);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleSendChat = () => {
+    if (!chatInput.trim()) return;
+    const msg = chatInput.trim();
+    setChatMessages(prev => [...prev, { sender: 'user', text: msg }]);
+    setChatInput('');
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, { sender: 'ai', text: `AI response for: "${msg}"` }]);
+    }, 500);
+  };
 
   const getIcon = () => {
     switch (component.type) {
@@ -40,13 +85,14 @@ const AppComponentRenderer: React.FC<AppComponentRendererProps> = ({
       case 'voice-output': return Mic;
       case 'language-selection': return Globe;
       case 'ai-copilot': return Bot;
-      case 'image': return Image;
+      case 'image': return ImageIcon;
       case 'button': return Hand;
       case 'container': return Box;
       case 'video-player': return Video;
       case 'chat-interface': return MessageSquare;
       case 'image-generator': return Sparkles;
       case 'analytics': return BarChart;
+      case 'custom': return Sparkles;
       default: return MessageSquare;
     }
   };
@@ -57,59 +103,59 @@ const AppComponentRenderer: React.FC<AppComponentRendererProps> = ({
       case 'voice-output': return 'Voice Output';
       case 'language-selection': return 'Language Selector';
       case 'ai-copilot': return 'AI Copilot';
-      case 'image': return 'Image';
-      case 'button': return 'Button';
+      case 'image': return 'Image Display';
+      case 'button': return 'Action Button';
       case 'container': return 'Container';
       case 'video-player': return 'Video Player';
       case 'chat-interface': return 'Chat Interface';
       case 'image-generator': return 'Image Generator';
-      case 'analytics': return 'Analytics';
+      case 'analytics': return 'Analytics Dashboard';
+      case 'custom': return 'AI Component';
       default: return 'Component';
     }
   };
 
-  const renderComponent = () => {
+  const renderComponentContent = () => {
     switch (component.type) {
       case 'text-input':
         return (
           <div className="space-y-2">
             {component.props.label && (
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-xs font-bold text-slate-300">
                 {component.props.label}
               </label>
             )}
             <input
               type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               placeholder={component.props.placeholder || 'Enter text...'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              readOnly
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
         );
 
       case 'voice-output':
         return (
-          <div className="space-y-3">
+          <div className="space-y-3 p-3.5 bg-purple-500/10 border border-purple-500/20 rounded-xl">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Voice Output</span>
+              <span className="text-xs font-bold text-purple-300">Voice Output</span>
               <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+                onClick={() => handleSpeak(component.props.text || 'Hello! How can I help you today?')}
+                className="p-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
               >
-                {isPlaying ? (
-                  <Pause className="w-4 h-4 text-blue-600" />
-                ) : (
-                  <Play className="w-4 h-4 text-blue-600" />
-                )}
+                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                <span>{isPlaying ? 'Stop' : 'Listen'}</span>
               </button>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg border">
-              <p className="text-sm text-gray-700">
-                {component.props.text || 'Sample voice output text'}
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <p className="text-xs text-slate-200">
+                {component.props.text || 'Hello! How can I help you today?'}
               </p>
             </div>
-            <div className="text-xs text-gray-500">
-              Voice: {component.props.voice || 'Default'}
+            <div className="text-[10px] text-purple-400 font-semibold flex items-center justify-between">
+              <span>Voice: {component.props.voice || 'Default'}</span>
+              <span className="text-slate-500">Multilingual TTS</span>
             </div>
           </div>
         );
@@ -117,11 +163,15 @@ const AppComponentRenderer: React.FC<AppComponentRendererProps> = ({
       case 'language-selection':
         return (
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
               Select Language
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              {(component.props.languages || ['en', 'es', 'fr']).map((lang: string) => (
+            <select
+              defaultValue={component.props.defaultLanguage || 'en'}
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+            >
+              {(component.props.languages || ['en', 'es', 'fr', 'de']).map((lang: string) => (
                 <option key={lang} value={lang}>
                   {lang.toUpperCase()}
                 </option>
@@ -132,43 +182,66 @@ const AppComponentRenderer: React.FC<AppComponentRendererProps> = ({
 
       case 'ai-copilot':
         return (
-          <div className="space-y-3">
+          <div className="space-y-3 p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
             <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-blue-600" />
-              <span className="font-medium text-gray-900">AI Assistant</span>
+              <Bot className="w-4 h-4 text-emerald-400" />
+              <span className="font-bold text-xs text-emerald-300">AI Copilot</span>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800">
-                {component.props.greeting || 'Hello! How can I assist you today?'}
-              </p>
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+              {chatMessages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`p-2 rounded-lg text-xs ${
+                    msg.sender === 'user'
+                      ? 'bg-emerald-500/20 text-emerald-200 ml-auto max-w-[85%]'
+                      : 'bg-slate-950 border border-slate-800 text-slate-200 max-w-[90%]'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              ))}
             </div>
-            <div className="text-xs text-gray-500">
-              Model: {component.props.model || 'GPT-4'} •
-              Personality: {component.props.personality || 'Helpful'}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                placeholder="Ask AI..."
+                className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 text-xs text-white rounded-lg focus:outline-none focus:border-emerald-500"
+              />
+              <button
+                onClick={handleSendChat}
+                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         );
 
       case 'image':
         return (
-          <div className="w-full">
+          <div className="space-y-2">
             <img
-              src={component.props.src || 'https://via.placeholder.com/300'}
-              alt={component.props.alt || 'Placeholder'}
-              className="w-full h-auto rounded-lg object-cover"
-              style={{ width: component.props.width || '100%' }}
+              src={component.props.src || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80'}
+              alt={component.props.alt || 'Component Graphic'}
+              className="w-full h-40 rounded-xl object-cover border border-slate-800 shadow-md"
             />
           </div>
         );
 
       case 'button': {
         const btnClass = component.props.variant === 'secondary'
-          ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-          : 'bg-emerald-600 text-white hover:bg-emerald-700';
+          ? 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
+          : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/20';
 
         return (
-          <button className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${btnClass}`}>
-            {component.props.label || 'Button'}
+          <button
+            onClick={() => toast.success(`Button "${component.props.label || 'Action'}" clicked!`)}
+            className={`w-full py-3 px-4 rounded-xl text-xs font-bold transition-all ${btnClass}`}
+          >
+            {component.props.label || 'Click Me'}
           </button>
         );
       }
@@ -176,93 +249,78 @@ const AppComponentRenderer: React.FC<AppComponentRendererProps> = ({
       case 'container':
         return (
           <div
-            className="w-full border-2 border-dashed border-gray-300 min-h-[100px] flex items-center justify-center text-gray-400 text-sm"
-            style={{
-              padding: component.props.padding || '16px',
-              backgroundColor: component.props.background || '#ffffff',
-              borderRadius: component.props.borderRadius || '8px'
-            }}
+            className="w-full border-2 border-dashed border-slate-800 min-h-[90px] p-4 flex flex-col items-center justify-center text-slate-400 text-xs rounded-xl bg-slate-950/60"
           >
-            Container Content
+            <Box className="w-5 h-5 mb-1 text-slate-600" />
+            <span>Container Layout Box</span>
           </div>
         );
 
       case 'video-player':
         return (
-          <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden">
-            <div className="text-white text-center">
-              <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm opacity-75">Video Player</p>
-              <p className="text-xs text-gray-400 mt-1 truncate max-w-[200px]">{component.props.src}</p>
+          <div className="aspect-video bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-center relative overflow-hidden">
+            <div className="text-slate-400 text-center p-3">
+              <Video className="w-8 h-8 mx-auto mb-2 text-emerald-400" />
+              <p className="text-xs font-bold text-slate-200">Video Player Container</p>
+              <p className="text-[10px] text-slate-500 mt-1 truncate max-w-[200px]">
+                {component.props.src || 'Embedded Media Player'}
+              </p>
             </div>
           </div>
         );
 
       case 'chat-interface':
         return (
-          <div className={`w-full border rounded-lg overflow-hidden flex flex-col h-[300px] ${component.props.theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <div className={`p-4 border-b ${component.props.theme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
-              <h4 className={`font-semibold ${component.props.theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{component.props.title || 'Chat'}</h4>
-            </div>
-            <div className="flex-1 p-4">
-              <div className={`max-w-[80%] rounded-lg p-3 mb-2 ${component.props.theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-800'}`}>
-                {component.props.initialMessage || 'Welcome!'}
+          <div className="w-full border border-slate-800 rounded-xl overflow-hidden flex flex-col bg-slate-950">
+            <div className="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                <h4 className="font-bold text-xs text-white">{component.props.title || 'Chat Support'}</h4>
               </div>
+              <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Online
+              </span>
             </div>
-            <div className={`p-4 border-t ${component.props.theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-              <div className={`w-full h-10 rounded-lg border ${component.props.theme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}></div>
+            <div className="p-3 space-y-2 max-h-32 overflow-y-auto">
+              <div className="max-w-[85%] rounded-xl p-2 bg-slate-900 border border-slate-800 text-slate-200 text-xs">
+                {component.props.initialMessage || 'Welcome! How can I help?'}
+              </div>
             </div>
           </div>
         );
 
       case 'image-generator':
         return (
-          <div className="space-y-3 p-4 bg-purple-50 rounded-lg border border-purple-100">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-5 h-5 text-purple-600" />
-              <h4 className="font-medium text-purple-900">AI Image Generator</h4>
+          <div className="space-y-3 p-3.5 bg-pink-500/10 rounded-xl border border-pink-500/20">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-pink-400" />
+              <h4 className="font-bold text-xs text-pink-300">AI Image Generator</h4>
             </div>
-            <div className="aspect-square bg-white border-2 border-dashed border-purple-200 rounded-lg flex items-center justify-center">
-              <p className="text-sm text-purple-400">Generated Image Will Appear Here</p>
-            </div>
-            <div className="flex gap-2">
-              <input type="text" placeholder={component.props.promptLabel || 'Describe image...'} className="flex-1 px-3 py-2 rounded border border-purple-200 text-sm" disabled />
-              <button className="bg-purple-600 text-white px-4 py-2 rounded text-sm font-medium opacity-50 cursor-not-allowed">
-                {component.props.buttonText || 'Generate'}
-              </button>
+            <div className="aspect-video bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-center p-3">
+              <p className="text-xs text-pink-300 font-bold">Interactive Prompt Preview</p>
             </div>
           </div>
         );
 
       case 'analytics':
         return (
-          <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-900">{component.props.title || 'Analytics'}</h3>
-              <select className="text-xs border-none bg-gray-50 rounded px-2 py-1">
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-              </select>
+          <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-white">{component.props.title || 'Analytics'}</h3>
+              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">Live</span>
             </div>
-            <div className="h-40 flex items-end justify-between gap-1 px-2">
+            <div className="h-24 flex items-end justify-between gap-1 px-1">
               {[40, 65, 45, 80, 55, 70, 60].map((h, i) => (
-                <div key={i} className="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative group" style={{ height: `${h}%` }}>
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    {h * 12}
-                  </div>
-                </div>
+                <div key={i} className="w-full bg-emerald-500/20 hover:bg-emerald-500/40 rounded-t transition-colors border-t border-emerald-400" style={{ height: `${h}%` }}></div>
               ))}
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-gray-400">
-              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
             </div>
           </div>
         );
 
       default:
         return (
-          <div className="p-4 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
-            <p className="text-sm text-gray-600">Unknown component type</p>
+          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+            <p className="text-xs text-slate-400">Standard component</p>
           </div>
         );
     }
@@ -272,347 +330,336 @@ const AppComponentRenderer: React.FC<AppComponentRendererProps> = ({
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
-      className="group relative bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-w-[250px] max-w-[350px]"
+      layout
+      whileHover={{ y: -2 }}
+      className="group relative bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-2xl shadow-2xl backdrop-blur-xl w-full text-slate-100 transition-all duration-200"
     >
-      {/* Component Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+      {/* Component Header Bar */}
+      <div className="flex items-center justify-between p-3 border-b border-slate-800 bg-slate-950/90 rounded-t-2xl">
         <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-blue-600" />
-          <span className="text-sm font-medium text-gray-900">{getTitle()}</span>
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <Icon className="w-4 h-4" />
+          </div>
+          <span className="text-xs font-extrabold text-white">{getTitle()}</span>
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Toolbar controls */}
+        <div className="flex items-center gap-1">
+          {onDuplicate && (
+            <button
+              onClick={onDuplicate}
+              className="p-1.5 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 rounded-lg transition-colors"
+              title="Duplicate Component"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="p-1 hover:bg-gray-200 rounded transition-colors"
-            title="Settings"
+            className={`p-1.5 border rounded-lg transition-colors ${
+              isEditing
+                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                : 'bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border-slate-800'
+            }`}
+            title="Edit Component Settings"
           >
-            <Settings className="w-4 h-4 text-gray-600" />
+            <Settings className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onDelete}
-            className="p-1 hover:bg-red-100 rounded transition-colors"
-            title="Delete"
+            className="p-1.5 bg-slate-950 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-800 rounded-lg transition-colors"
+            title="Delete Component"
           >
-            <Trash2 className="w-4 h-4 text-red-600" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
-          <div className="cursor-move p-1 hover:bg-gray-200 rounded" title="Move">
-            <Move className="w-4 h-4 text-gray-600" />
+          <div className="cursor-move p-1.5 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 rounded-lg" title="Drag to Move">
+            <Move className="w-3.5 h-3.5" />
           </div>
         </div>
       </div>
 
       {/* Component Content */}
       <div className="p-4">
-        {renderComponent()}
+        {renderComponentContent()}
       </div>
 
-      {/* Settings Panel */}
-      {isEditing && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-lg"
-        >
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Component Settings</h4>
+      {/* Inline Component Settings Panel */}
+      <AnimatePresence>
+        {isEditing && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-t border-slate-800 p-4 bg-slate-950/95 rounded-b-2xl space-y-3"
+          >
+            <h4 className="text-xs font-bold text-white flex items-center gap-1.5 border-b border-slate-800 pb-2">
+              <Settings className="w-3.5 h-3.5 text-emerald-400" /> Component Properties
+            </h4>
 
-          {component.type === 'text-input' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Label
-                </label>
-                <input
-                  type="text"
-                  value={component.props.label || ''}
-                  onChange={(e) => onUpdate({
-                    props: { ...component.props, label: e.target.value }
-                  })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'text-input' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Label</label>
+                  <input
+                    type="text"
+                    value={component.props.label || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, label: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Placeholder</label>
+                  <input
+                    type="text"
+                    value={component.props.placeholder || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, placeholder: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Placeholder
-                </label>
-                <input
-                  type="text"
-                  value={component.props.placeholder || ''}
-                  onChange={(e) => onUpdate({
-                    props: { ...component.props, placeholder: e.target.value }
-                  })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'voice-output' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Text to Speak
-                </label>
-                <textarea
-                  value={component.props.text || ''}
-                  onChange={(e) => onUpdate({
-                    props: { ...component.props, text: e.target.value }
-                  })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                  rows={2}
-                />
+            {component.type === 'voice-output' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Voice Text</label>
+                  <textarea
+                    value={component.props.text || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, text: e.target.value } })}
+                    rows={2}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Voice Model</label>
+                  <select
+                    value={component.props.voice || 'default'}
+                    onChange={(e) => onUpdate({ props: { ...component.props, voice: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="default">Default Multilingual</option>
+                    <option value="elevenlabs-clara">ElevenLabs Clara</option>
+                    <option value="elevenlabs-james">ElevenLabs James</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Voice
-                </label>
-                <select
-                  value={component.props.voice || 'default'}
-                  onChange={(e) => onUpdate({
-                    props: { ...component.props, voice: e.target.value }
-                  })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="default">Default</option>
-                  <option value="elevenlabs-clara">ElevenLabs - Clara</option>
-                  <option value="elevenlabs-james">ElevenLabs - James</option>
-                  <option value="custom">Custom Voice</option>
-                </select>
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'ai-copilot' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Greeting Message
-                </label>
-                <input
-                  type="text"
-                  value={component.props.greeting || ''}
-                  onChange={(e) => onUpdate({
-                    props: { ...component.props, greeting: e.target.value }
-                  })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'language-selection' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Default Language</label>
+                  <select
+                    value={component.props.defaultLanguage || 'en'}
+                    onChange={(e) => onUpdate({ props: { ...component.props, defaultLanguage: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="en">English (US)</option>
+                    <option value="es">Spanish (ES)</option>
+                    <option value="fr">French (FR)</option>
+                    <option value="de">German (DE)</option>
+                    <option value="zh">Chinese (ZH)</option>
+                    <option value="ja">Japanese (JA)</option>
+                    <option value="hi">Hindi (HI)</option>
+                    <option value="ar">Arabic (AR)</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  AI Model
-                </label>
-                <select
-                  value={component.props.model || 'gpt-4'}
-                  onChange={(e) => onUpdate({
-                    props: { ...component.props, model: e.target.value }
-                  })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="gpt-4">GPT-4</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                  <option value="claude-3">Claude 3</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Personality
-                </label>
-                <select
-                  value={component.props.personality || 'helpful'}
-                  onChange={(e) => onUpdate({
-                    props: { ...component.props, personality: e.target.value }
-                  })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="helpful">Helpful</option>
-                  <option value="creative">Creative</option>
-                  <option value="professional">Professional</option>
-                  <option value="friendly">Friendly</option>
-                </select>
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'image' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Image URL</label>
-                <input
-                  type="text"
-                  value={component.props.src || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, src: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'ai-copilot' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Initial Greeting</label>
+                  <input
+                    type="text"
+                    value={component.props.greeting || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, greeting: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">AI Engine Model</label>
+                  <select
+                    value={component.props.model || 'gpt-4'}
+                    onChange={(e) => onUpdate({ props: { ...component.props, model: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="gpt-4">GPT-4 Turbo</option>
+                    <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                    <option value="gemini-1-5-pro">Gemini 1.5 Pro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Personality</label>
+                  <select
+                    value={component.props.personality || 'helpful'}
+                    onChange={(e) => onUpdate({ props: { ...component.props, personality: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="helpful">Helpful Assistant</option>
+                    <option value="creative">Creative & Friendly</option>
+                    <option value="concise">Concise & Professional</option>
+                    <option value="technical">Technical Expert</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Alt Text</label>
-                <input
-                  type="text"
-                  value={component.props.alt || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, alt: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'button' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Label</label>
-                <input
-                  type="text"
-                  value={component.props.label || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, label: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'button' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Button Text</label>
+                  <input
+                    type="text"
+                    value={component.props.label || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, label: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Variant</label>
+                  <select
+                    value={component.props.variant || 'primary'}
+                    onChange={(e) => onUpdate({ props: { ...component.props, variant: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="primary">Primary Gradient</option>
+                    <option value="secondary">Secondary Dark</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Variant</label>
-                <select
-                  value={component.props.variant || 'primary'}
-                  onChange={(e) => onUpdate({ props: { ...component.props, variant: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="primary">Primary</option>
-                  <option value="secondary">Secondary</option>
-                </select>
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'container' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Background Color</label>
-                <input
-                  type="color"
-                  value={component.props.background || '#ffffff'}
-                  onChange={(e) => onUpdate({ props: { ...component.props, background: e.target.value } })}
-                  className="w-full h-8 border border-gray-300 rounded cursor-pointer"
-                />
+            {component.type === 'image' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Image URL</label>
+                  <input
+                    type="text"
+                    value={component.props.src || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, src: e.target.value } })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Alt Text</label>
+                  <input
+                    type="text"
+                    value={component.props.alt || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, alt: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Padding</label>
-                <input
-                  type="text"
-                  value={component.props.padding || '16px'}
-                  onChange={(e) => onUpdate({ props: { ...component.props, padding: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'video-player' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Video URL</label>
-                <input
-                  type="text"
-                  value={component.props.src || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, src: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'container' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Container Padding</label>
+                  <input
+                    type="text"
+                    value={component.props.padding || '16px'}
+                    onChange={(e) => onUpdate({ props: { ...component.props, padding: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Background Color</label>
+                  <input
+                    type="text"
+                    value={component.props.background || '#0f172a'}
+                    onChange={(e) => onUpdate({ props: { ...component.props, background: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={component.props.autoplay || false}
-                  onChange={(e) => onUpdate({ props: { ...component.props, autoplay: e.target.checked } })}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label className="text-xs font-medium text-gray-700">Autoplay</label>
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'chat-interface' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={component.props.title || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, title: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'video-player' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Video Source URL</label>
+                  <input
+                    type="text"
+                    value={component.props.src || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, src: e.target.value } })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Initial Message</label>
-                <input
-                  type="text"
-                  value={component.props.initialMessage || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, initialMessage: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Theme</label>
-                <select
-                  value={component.props.theme || 'light'}
-                  onChange={(e) => onUpdate({ props: { ...component.props, theme: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'image-generator' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Prompt Placeholder</label>
-                <input
-                  type="text"
-                  value={component.props.promptLabel || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, promptLabel: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'chat-interface' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Chat Title</label>
+                  <input
+                    type="text"
+                    value={component.props.title || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, title: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Welcome Message</label>
+                  <input
+                    type="text"
+                    value={component.props.initialMessage || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, initialMessage: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Button Text</label>
-                <input
-                  type="text"
-                  value={component.props.buttonText || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, buttonText: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {component.type === 'analytics' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Chart Title</label>
-                <input
-                  type="text"
-                  value={component.props.title || ''}
-                  onChange={(e) => onUpdate({ props: { ...component.props, title: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
+            {component.type === 'image-generator' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Prompt Field Label</label>
+                  <input
+                    type="text"
+                    value={component.props.promptLabel || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, promptLabel: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Chart Type</label>
-                <select
-                  value={component.props.chartType || 'line'}
-                  onChange={(e) => onUpdate({ props: { ...component.props, chartType: e.target.value } })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="line">Line Chart</option>
-                  <option value="bar">Bar Chart</option>
-                  <option value="pie">Pie Chart</option>
-                </select>
+            )}
+
+            {component.type === 'analytics' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={component.props.title || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, title: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </motion.div>
-      )}
+            )}
+
+            {component.type === 'custom' && (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">AI Prompt</label>
+                  <input
+                    type="text"
+                    value={component.props.prompt || ''}
+                    onChange={(e) => onUpdate({ props: { ...component.props, prompt: e.target.value } })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
