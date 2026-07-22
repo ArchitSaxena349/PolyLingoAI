@@ -255,6 +255,8 @@ const LandingPage: React.FC = () => {
       description: 'Design conversational AI assistants with custom personalities, fallback logic, and context awareness.',
       badge: 'NLP Engine',
       gradient: 'from-emerald-500 to-teal-500',
+      link: '/builder/new',
+      tab: 'chatbot'
     },
     {
       icon: Mic,
@@ -262,13 +264,17 @@ const LandingPage: React.FC = () => {
       description: 'Synthesize life-like audio output and clone custom voices directly into your AI workflows.',
       badge: 'Voice AI',
       gradient: 'from-purple-500 to-pink-500',
+      link: '/voice-studio',
+      tab: 'voice'
     },
     {
       icon: Globe,
-      title: ' Instant 50+ Language Translation',
+      title: 'Instant 50+ Language Translation',
       description: 'Break global barriers with real-time automatic translation powered by neural Lingo APIs.',
       badge: 'Localization',
       gradient: 'from-blue-500 to-cyan-500',
+      link: '/builder/new',
+      tab: 'translate'
     },
     {
       icon: Zap,
@@ -276,6 +282,7 @@ const LandingPage: React.FC = () => {
       description: 'Assemble rich user interfaces with zero code required. Move, resize, and connect components seamlessly.',
       badge: 'Visual Builder',
       gradient: 'from-amber-500 to-orange-500',
+      link: '/builder/new'
     },
     {
       icon: ShieldCheck,
@@ -283,6 +290,7 @@ const LandingPage: React.FC = () => {
       description: 'Powered by Supabase PostgreSQL with strict Row Level Security to protect user data.',
       badge: 'Production Ready',
       gradient: 'from-indigo-500 to-purple-500',
+      link: '/settings'
     },
     {
       icon: Smartphone,
@@ -290,6 +298,7 @@ const LandingPage: React.FC = () => {
       description: 'Export ready-to-deploy React and Netlify site configurations instantly with custom domains.',
       badge: 'Deployment',
       gradient: 'from-rose-500 to-pink-500',
+      link: '/templates'
     },
   ];
 
@@ -760,7 +769,18 @@ const LandingPage: React.FC = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.08 }}
-                className="bg-slate-900/80 p-8 rounded-3xl border border-slate-800 hover:border-emerald-500/50 transition-all duration-300 group hover:shadow-2xl hover:shadow-emerald-500/10 flex flex-col justify-between"
+                onClick={() => {
+                  if (feature.tab) {
+                    setActiveDemoTab(feature.tab as any);
+                    const demoElement = document.getElementById('demo');
+                    if (demoElement) {
+                      demoElement.scrollIntoView({ behavior: 'smooth' });
+                      return;
+                    }
+                  }
+                  navigate(feature.link);
+                }}
+                className="bg-slate-900/80 p-8 rounded-3xl border border-slate-800 hover:border-emerald-500/50 transition-all duration-300 group hover:shadow-2xl hover:shadow-emerald-500/10 flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between mb-6">
@@ -781,7 +801,7 @@ const LandingPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center text-xs font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
+                <div className="flex items-center text-xs font-semibold text-emerald-400 group-hover:text-emerald-300 group-hover:translate-x-1 transition-transform">
                   <span>Learn more</span>
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
